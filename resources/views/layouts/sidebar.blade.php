@@ -252,11 +252,17 @@
             <li class="nav-item"><a href="/app/inventory/adjustments" class=""><i class="nav-icon i-Laptop-Secure"></i> <span class="item-name">Inventory Adjustments</span></a></li>
             {{-- <li class="nav-item"><a href="/app/inventory/procurements" class=""><i class="nav-icon i-Computer-Secure"></i> <span class="item-name">PRF - Procurement Request Form</span></a></li> --}}
             <li class="nav-item">
-    <a href="{{ route('inventory_purchase_orders.index') }}" class="{{ request()->routeIs('inventory_purchase_orders.*') ? 'active' : '' }}">
-        <i class="nav-icon i-Billing"></i>
-        <span class="item-name">PO - Purchase Orders</span>
-    </a>
-</li>
+               <a href="{{ route('inventory_purchase_orders.index') }}" class="{{ request()->routeIs('inventory_purchase_orders.*') ? 'active' : '' }}">
+                  <i class="nav-icon i-Billing"></i>
+                  <span class="item-name">PO - Purchase Orders</span>
+               </a>
+            </li>
+            <li class="nav-item">
+               <a href="{{ route('kitchen-mrp.index') }}" class="{{ request()->routeIs('kitchen-mrp.*') ? 'active' : '' }}">
+                  <i class="fa-solid fa-hands-holding"></i>
+                  <span class="item-name">Kitchen MRP</span>
+               </a>
+            </li>
             <li class="nav-item"><a href="/inventory/transfer" class=""><i class="nav-icon i-Ambulance"></i> <span class="item-name">Inventory Transfer</span></a></li>
             {{-- <li class="nav-item"><a href="/app/inventory/transfers" class=""><i class="nav-icon i-Jeep-2"></i> <span class="item-name">Warehouse to Warehouse (Inbound)</span></a></li> --}}
             {{-- <li class="nav-item"><a href="/app/inventory/warehouse-transfers" class=""><i class="nav-icon i-Jeep-2"></i> <span class="item-name">Warehouse to Warehouse (Outbound)</span></a></li> --}}
