@@ -2,24 +2,7 @@
 @section('content')
 
 @php
-    $isEdit = $isEdit ?? false;
-    $detailsArray = [];
-
-    if ($isEdit && isset($ap)) {
-        $detailsArray = $ap->details->map(function($d) {
-            return [
-                'accounting_category_id' => $d->accounting_category_id,
-                'category_name' => $d->category->category_payable ?? '',
-                'type' => $d->category->type_payable ?? '',
-                'description' => $d->description,
-                'quantity' => $d->quantity,
-                'tax_id' => $d->tax_id,
-                'tax_value' => $d->tax_value,
-                'amount_per_unit' => $d->amount_per_unit,
-                'total_amount' => $d->total_amount,
-            ];
-        })->toArray();
-    }
+$detailsArray = $detailsArray ?? [];
 @endphp
 
 <div class="main-content" id="app">
@@ -33,11 +16,17 @@
         <div class="separator-breadcrumb border-top"></div>
     </div>
 
-    <form action="{{ $isEdit ? route('accounts-payables.update', $ap->id) : route('accounts-payables.store') }}" method="POST">
-        @csrf
-        @if($isEdit)
-            @method('PUT')
-        @endif
+    <form id="apForm"
+        action="{{ $isEdit 
+        ? route('accounts-payables.update', $ap->id) 
+        : route('accounts-payables.store') }}" 
+        method="POST"
+    >
+
+    @csrf
+    @if($isEdit)
+        @method('PUT')
+    @endif
 
         <div class="wrapper">
             <div class="row">
@@ -122,18 +111,39 @@
                     <div class="card p-3">
                         <h5>Step 2: Particulars</h5>
 
-                        <label>Category *</label>
-                        <select id="cat" class="form-control">
-                            <option value="">Select Category</option>
-                            @foreach($categories as $c)
-                                <option value="{{ $c->category_payable }}">{{ $c->category_payable }}</option>
+                        <label>Account Name</label>
+                        <select id="chart_account_id" class="form-control">
+                            <option value="" selected disabled>Select Account Name</option>
+                            @foreach($categories as $account)
+                                <option value="{{ $account->id }}"
+                                    data-category="{{ $account->category_name }}"
+                                    data-subcategory="{{ $account->subcategory_name }}">
+                                    {{ $account->code }} - {{ $account->name }}
+                                </option>
                             @endforeach
                         </select>
 
-                        <label class="mt-3">Type *</label>
-                        <select id="type" class="form-control" required>
-                            <option value="" selected disabled>Select Type</option>
-                        </select>
+                        <fieldset class="form-group mt-3" id="accountDetails" style="display:none;">
+                            <div class="row">
+                                <div class="col-6 pr-1">
+                                    <legend class="col-form-label pt-0">Category</legend>
+                                    <input type="text"
+                                        id="categoryDisplay"
+                                        class="form-control"
+                                        readonly
+                                        style="background:#f8f9fa;">
+                                </div>
+
+                                <div class="col-6 pl-1">
+                                    <legend class="col-form-label pt-0">Sub Category</legend>
+                                    <input type="text"
+                                        id="subcategoryDisplay"
+                                        class="form-control"
+                                        readonly
+                                        style="background:#f8f9fa;">
+                                </div>
+                            </div>
+                        </fieldset>
 
                         <label class="mt-3">Description *</label>
                         <textarea id="desc" class="form-control">{{ old('desc') }}</textarea>
@@ -143,17 +153,35 @@
 
                         <label class="mt-3">Tax *</label>
                         <select id="tax" class="form-control">
-                            <option value="" disabled selected>-</option>
-                            @foreach($taxes as $t)
-                                {{-- <option value="{{ $t->id }}" data-value="{{ $t->value }}">
-                                {{ $t->name }} - ₱{{ number_format($t->value, 2) }}
-                            </option> --}}
-                            <option value="{{ $t->id }}" 
-                        data-value="{{ $t->value }}" 
-                        data-type="{{ $t->type }}">
-                    {{ $t->name }}
-                </option>
-                            @endforeach
+                            <option value="" disabled selected>Select Tax</option>
+
+                            <!-- 12% VAT -->
+                            <option value="vat"
+                                    data-value="12"
+                                    data-type="percentage">
+                                VAT (12%)
+                            </option>
+
+                            <!-- Non-VAT -->
+                            <option value="non-vat"
+                                    data-value="0"
+                                    data-type="percentage">
+                                NON-VAT (0%)
+                            </option>
+
+                            <!-- Zero Rated -->
+                            <option value="zero-rated"
+                                    data-value="0"
+                                    data-type="percentage">
+                                ZERO-RATED (0%)
+                            </option>
+
+                            <!-- Fixed Example (Optional) -->
+                            <option value="fixed-100"
+                                    data-value="100"
+                                    data-type="fixed">
+                                Fixed Tax ₱100
+                            </option>
                         </select>
 
                         <label class="mt-3">Amount per Unit *</label>
@@ -212,8 +240,16 @@
                         <input type="hidden" name="details" id="detailsInput">
 
                         <div class="text-right mt-3">
-                            <button class="btn btn-success">{{ $isEdit ? 'Update' : 'Submit' }}</button>
-                            <a href="{{ route('accounts-payables.index') }}" class="btn btn-outline-secondary">Cancel</a>
+                            <button type="button"
+                                    class="btn btn-success"
+                                    onclick="submitApForm()">
+                                {{ $isEdit ? 'Update' : 'Submit' }}
+                            </button>
+
+                            <a href="{{ route('accounts-payables.index') }}"
+                            class="btn btn-outline-secondary">
+                                Cancel
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -230,75 +266,99 @@
     });
 
 function addToSummary() {
-    const cat = document.getElementById("cat");
-    const typeSelect = document.getElementById("type");
+
+    const chartAccount = document.getElementById("chart_account_id");
     const descInput = document.getElementById("desc");
     const qtyInput = document.getElementById("qty");
-    const taxSelect = document.getElementById('tax');
+    const taxSelect = document.getElementById("tax");
     const amtInput = document.getElementById("amount");
 
-    const catName = cat.options[cat.selectedIndex].text;
-    const typeId = typeSelect.value;
-    const typeName = typeSelect.options[typeSelect.selectedIndex]?.text || '';
-    const desc = descInput.value;
+    const desc = descInput.value.trim();
     const qty = parseFloat(qtyInput.value);
-    const selectedTax = taxSelect.options[taxSelect.selectedIndex];
-    const tax_id = parseInt(selectedTax.value, 10);
-    const tax_value = parseFloat(selectedTax.dataset.value) || 0;
-    const tax_type = selectedTax.dataset.type;
     const amt = parseFloat(amtInput.value);
 
-    // Validation only for Step 2 fields
-    if (!cat.value || !typeId || !desc || amt <= 0) {
-        alert("Please fill out all fields in Step 2.");
+    // ✅ VALIDATION SECTION
+    if (!chartAccount.value) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Missing Account',
+            text: 'Please select an account.'
+        });
         return;
     }
-    // Disable step 1
-    disableStep1();
 
-    // TAX CALCULATION
+    if (!desc) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Missing Description',
+            text: 'Please enter a description.'
+        });
+        return;
+    }
+
+    if (!qty || qty <= 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Invalid Quantity',
+            text: 'Quantity must be greater than 0.'
+        });
+        return;
+    }
+
+    if (!amt || amt <= 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Invalid Amount',
+            text: 'Amount must be greater than 0.'
+        });
+        return;
+    }
+
+    // ✅ Safe Tax Handling
+    let tax_id = null;
+    let tax_value = 0;
+    let tax_type = 'fixed';
+
+    if (taxSelect.value) {
+        const selectedTax = taxSelect.selectedOptions[0];
+        tax_id = parseInt(selectedTax.value);
+        tax_value = parseFloat(selectedTax.dataset.value) || 0;
+        tax_type = selectedTax.dataset.type || 'fixed';
+    }
+
+    const subtotal = qty * amt;
     let tax_amount = 0;
 
     if (tax_type === "percentage") {
-        tax_amount = (qty * amt) * (tax_value / 100);
+        tax_amount = subtotal * (tax_value / 100);
     } else {
         tax_amount = tax_value;
     }
 
-    const total_amount = (qty * amt) + tax_amount;
+    const total_amount = subtotal + tax_amount;
 
-    // Add to details array
+    // ✅ PUSH SAFE OBJECT
     details.push({
-        accounting_category_id: parseInt(typeId, 10),
-        category_name: catName,
-        type_name: typeName,
+        chart_account_id: parseInt(chartAccount.value),
+        category_name: chartAccount.selectedOptions[0].dataset.category,
+        subcategory_name: chartAccount.selectedOptions[0].dataset.subcategory,
         description: desc,
         quantity: qty,
         tax_id: tax_id,
-        tax_value: tax_value,
-        tax_type: tax_type, 
         amount_per_unit: amt,
-        total_amount: total_amount
+        total_amount: total_amount,
+        tax_value: tax_value, // frontend only
+        tax_type: tax_type    // frontend only
     });
 
-    // Render updated table
     renderTable();
 
-    // REMOVE REQUIRED FROM STEP 2
-    cat.removeAttribute("required");
-    typeSelect.removeAttribute("required");
-    descInput.removeAttribute("required");
-    qtyInput.removeAttribute("required");
-    taxSelect.removeAttribute("required");
-    amtInput.removeAttribute("required");
-
-    // CLEAR STEP 2 FIELDS
-    cat.value = "";
-    typeSelect.innerHTML = `<option value="" disabled selected>Select Type</option>`;
-    descInput.value = "";
+    // ✅ Reset fields
+    chartAccount.value = '';
+    descInput.value = '';
     qtyInput.value = 1;
-    taxSelect.value = "";
-    amtInput.value = 0;
+    taxSelect.value = '';
+    amtInput.value = '';
 }
 
 function renderTable() {
@@ -306,43 +366,41 @@ function renderTable() {
     tbody.innerHTML = "";
 
     if (details.length === 0) {
-        tbody.innerHTML = `<tr id="emptyRow"><td colspan="7" class="text-center text-muted">No data for table</td></tr>`;
+        tbody.innerHTML = `<tr id="emptyRow"><td colspan="8" class="text-center text-muted">No data for table</td></tr>`;
+        return;
     }
 
     details.forEach((row, i) => {
-    let qty = parseFloat(row.quantity);
-    let unit = parseFloat(row.amount_per_unit);
-    let subtotal = qty * unit;
+        const qty = parseFloat(row.quantity) || 0;
+        const unit = parseFloat(row.amount_per_unit) || 0;
+        const subtotal = qty * unit;
 
-    let taxAmount = 0;
-    if (row.tax_type === "percentage") {
-        taxAmount = subtotal * (parseFloat(row.tax_value) / 100);
-    } else {
-        taxAmount = parseFloat(row.tax_value);
-    }
+        const taxAmount = row.tax_type === 'percentage'
+            ? subtotal * (parseFloat(row.tax_value) / 100)
+            : parseFloat(row.tax_value || 0);
 
-    let totalWithTax = subtotal + taxAmount;
+        const totalWithTax = subtotal + taxAmount;
 
-    // Update row values
-    row.tax_amount = taxAmount;
-    row.total_amount = totalWithTax;
+        tbody.innerHTML += `
+            <tr data-row>
+                <td>${row.category_name}</td>
+                <td>${row.subcategory_name}</td>
+                <td>${row.description}</td>
+                <td>${row.quantity}</td>
+                <td>₱${taxAmount.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                <td>₱${subtotal.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                <td>₱${totalWithTax.toLocaleString(undefined,{minimumFractionDigits:2})}</td>
+                <td class="text-right">
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(${i})">Delete</button>
+                </td>
+            </tr>
+        `;
 
-    tbody.innerHTML += `
-        <tr data-row>
-            <td>${row.category_name}</td>
-            <td>${row.type_name}</td>
-            <td>${row.description}</td>
-            <td>${row.quantity}</td>
-            <td>₱${taxAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-            <td>₱${subtotal.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-            <td>₱${totalWithTax.toLocaleString(undefined, {minimumFractionDigits: 2})}</td>
-            <td class="text-right">
-                <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(${i})">Delete</button>
-            </td>
-        </tr>`;
-});
+        // update the row total in details array
+        row.total_amount = totalWithTax;
+    });
 
-    document.getElementById("detailsInput").value = JSON.stringify(details);
+    document.getElementById('detailsInput').value = JSON.stringify(details);
     updateTotals();
 }
 
@@ -387,52 +445,44 @@ function updateTotals() {
         `₱${grandTotal.toLocaleString(undefined, {minimumFractionDigits: 2})}`;
 }
 
-document.getElementById('cat').addEventListener('change', function () {
-    const category = this.value;            // this.value is category_payable string
-    const typeSelect = document.getElementById('type');
-    typeSelect.innerHTML = '<option value="">Loading...</option>';
+document.getElementById('chart_account_id').addEventListener('change', function () {
 
-    if (!category) {
-        typeSelect.innerHTML = '<option value="">Select Type</option>';
-        return;
-    }
+    const selected = this.options[this.selectedIndex];
 
-    fetch(`/accounts-payables/get-types/${encodeURIComponent(category)}`)
-        .then(response => {
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.json();
-        })
-        .then(data => {
-            typeSelect.innerHTML = '<option value="">Select Type</option>';
-            data.forEach(type => {
-                // type.id is integer (accounting_category id), type.type_payable is the label
-                typeSelect.innerHTML += `<option value="${type.id}">${type.type_payable}</option>`;
-            });
-        })
-        .catch(() => {
-            typeSelect.innerHTML = '<option value="">Error loading types</option>';
-        });
+    const category = selected.dataset.category;
+    const subcategory = selected.dataset.subcategory;
+
+    document.getElementById('categoryDisplay').value = category || '';
+    document.getElementById('subcategoryDisplay').value = subcategory || '';
+
+    document.getElementById('accountDetails').style.display = 'block';
 });
 
-document.querySelector('form').addEventListener('submit', function(e){
-    if(details.length < 1){
+document.querySelector('form').addEventListener('submit', function(e) {
+
+    if (details.length < 1) {
         e.preventDefault();
-        alert('Please add at least one summary item.');
+
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Items Added',
+            text: 'Please add at least one summary item before saving.'
+        });
+
         return false;
     }
+
     document.getElementById('detailsInput').value = JSON.stringify(details);
+
+    Swal.fire({
+        title: 'Saving...',
+        text: 'Please wait.',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
 });
-
-// function disableStep1() {
-//     const step1Fields = document.querySelectorAll(
-//         "#created_at, input[name='reference_number'], input[name='payor_details'], input[name='payer_name'], input[name='payer_company'], input[name='payer_address'], input[name='payer_mobile_number'], input[name='payer_email_address'], input[name='payer_tin'], input[name='due_date']"
-//     );
-
-//     step1Fields.forEach(field => {
-//         field.setAttribute('readonly', true); // <-- allows submission
-//         field.classList.add('bg-light');      // visual cue it's locked
-//     });
-// }
 
 function disableStep1() {
     const step1 = document.getElementById("step1");
@@ -474,6 +524,44 @@ function enableStep1() {
 
     // Hide edit button again
     editBtn.classList.add("d-none");
+}
+
+function submitApForm() {
+
+    if (details.length < 1) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'No Items Added',
+            text: 'Please add at least one summary item before saving.'
+        });
+        return;
+    }
+
+    // Update hidden input
+    document.getElementById('detailsInput').value = JSON.stringify(details);
+
+    Swal.fire({
+        title: '{{ $isEdit ? "Confirm Update?" : "Confirm Submission?" }}',
+        text: 'Please confirm to proceed.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, proceed'
+    }).then((result) => {
+        if (result.isConfirmed) {
+
+            Swal.fire({
+                title: 'Processing...',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            document.getElementById('apForm').submit();
+        }
+    });
 }
 
 </script>

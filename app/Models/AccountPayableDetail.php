@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class AccountPayableDetail extends Model
 {
     protected $fillable = [
+        'chart_account_id',
         'account_payable_id',
         'accounting_category_id',
         'payment_id',
@@ -27,5 +28,10 @@ class AccountPayableDetail extends Model
     public function category()
     {
         return $this->belongsTo(AccountingCategory::class, 'accounting_category_id');
+    }
+
+    public function chartAccount()
+    {
+        return $this->belongsTo(\App\Models\ChartAccount::class);
     }
 }

@@ -6,6 +6,7 @@ use App\Models\AccountPayable;
 use App\Models\AccountPayableDetail;
 use App\Models\AccountingCategory;
 use App\Models\Branch;
+use App\Models\ChartAccount;
 use App\Models\PaymentDetail;
 use App\Models\Tax;
 use Illuminate\Http\Request;
@@ -26,12 +27,12 @@ class AccountPayableController extends Controller
 
     public function create()
     {
-        $categories = AccountingCategory::where('mode', 'payable')
-            ->whereNull('type_payable')     // only main categories
-            ->select('category_payable')    // get category name
-            ->distinct()                    // unique values
-            ->orderBy('category_payable')
-            ->get();
+        $categories = ChartAccount::with(['category', 'subCategory'])
+    // Filter by the 'classification' column in the 'accounting_categories' table
+    ->whereHas('category', function($query) {
+        $query->where('classification', 'debit');
+    })
+    ->get();
 
         $branches = Branch::all();
         $currentBranch = auth()->check() ? auth()->user()->branches()->first() : null;
@@ -69,15 +70,19 @@ class AccountPayableController extends Controller
 
         // Insert EACH detail item
         foreach ($details as $row) {
+            $chartAccount = ChartAccount::find($row['chart_account_id']);
+            
             AccountPayableDetail::create([
-                'account_payable_id' => $payable->id,
-                'accounting_category_id' => $row['accounting_category_id'],
-                'description' => $row['description'],
-                'quantity' => $row['quantity'],
-                'tax_id' => $row['tax_id'],         // ⬅️ USE THIS
-                'tax_value' => $row['tax_value'],    // MUST EXIST IN DB
-                'amount_per_unit' => $row['amount_per_unit'],
-                'total_amount' => $row['total_amount'],
+                'account_payable_id'     => $payable->id,
+                'chart_account_id'       => $row['chart_account_id'],
+                'accounting_category_id' => $chartAccount->accounting_category_id, // ✅ fill this
+                'description'            => $row['description'],
+                'quantity'               => $row['quantity'],
+                'tax_id'                 => $row['tax_id'] ?? null,
+                'tax_value'              => $row['tax_value'] ?? 0,
+                'tax_type'               => $row['tax_type'] ?? null,
+                'amount_per_unit'        => $row['amount_per_unit'],
+                'total_amount'           => $row['total_amount'],
             ]);
         }
 
@@ -137,35 +142,84 @@ class AccountPayableController extends Controller
     }
 
     public function edit($id)
-    {
-        $ap = AccountPayable::with('details')->findOrFail($id);
-        $categories = AccountingCategory::where('mode', 'payable')->get();
-        $taxes = Tax::all(); // Fetch all taxes
+{
+    $ap = AccountPayable::with('details.chartAccount.category', 'details.chartAccount.subCategory')
+        ->findOrFail($id);
 
-        return view('accounts-payables.edit', compact('ap', 'categories', 'taxes'));
-    }
+    // SAME FILTER as create (debit only)
+    $categories = ChartAccount::with(['category', 'subCategory'])
+        ->whereHas('category', function($query) {
+            $query->where('classification', 'debit');
+        })
+        ->get();
+
+    $branches = Branch::all();
+    $currentBranch = auth()->check() ? auth()->user()->branches()->first() : null;
+    $currentBranchId = $currentBranch->id ?? ($branches->first()->id ?? null);
+
+    $taxes = Tax::all();
+
+    // Prepare details for JS (NO tax_value / tax_type)
+    $detailsArray = $ap->details->map(function($d) {
+        return [
+            'chart_account_id' => $d->chart_account_id,
+            'category_name'    => $d->chartAccount->category->category ?? '',
+            'subcategory_name' => $d->chartAccount->subCategory->name ?? '',
+            'description'      => $d->description,
+            'quantity'         => $d->quantity,
+            'tax_id'           => $d->tax_id,
+            'amount_per_unit'  => $d->amount_per_unit,
+            'total_amount'     => $d->total_amount,
+        ];
+    })->toArray();
+
+    return view('accounts-payables.form', compact(
+        'ap',
+        'categories',
+        'branches',
+        'currentBranchId',
+        'taxes',
+        'detailsArray'
+    ))->with('isEdit', true);
+}
 
     public function update(Request $request, $id)
-    {
-        $ap = AccountPayable::findOrFail($id);
+{
+    $ap = AccountPayable::findOrFail($id);
 
-        $validated = $request->validate([
-            'payor_details' => 'nullable|string',
-            'payer_name' => 'nullable|string',
-            'payer_company' => 'nullable|string',
-            'payer_address' => 'nullable|string',
-            'payer_mobile_number' => 'nullable|string',
-            'payer_email_address' => 'nullable|string',
-            'payer_tin' => 'nullable|string',
-            'due_date' => 'nullable|date',
-            'status' => 'required|string',
+    $validated = $request->validate([
+        'payor_details' => 'nullable|string',
+    ]);
+
+    $ap->update($validated);
+
+    $details = json_decode($request->details, true);
+
+    // DELETE old details
+    $ap->details()->delete();
+
+    foreach ($details as $row) {
+
+        if(empty($row['chart_account_id'])) continue;
+
+        $chartAccount = ChartAccount::find($row['chart_account_id']);
+        if(!$chartAccount) continue;
+
+        AccountPayableDetail::create([
+            'account_payable_id'     => $ap->id,
+            'chart_account_id'       => $row['chart_account_id'],
+            'accounting_category_id' => $chartAccount->accounting_category_id,
+            'description'            => $row['description'] ?? '',
+            'quantity'               => $row['quantity'] ?? 0,
+            'tax_id'                 => $row['tax_id'] ?? null,
+            'amount_per_unit'        => $row['amount_per_unit'] ?? 0,
+            'total_amount'           => $row['total_amount'] ?? 0,
         ]);
-
-        $ap->update($validated);
-
-        return redirect()->route('account_payables.index')
-            ->with('success', 'Account Payable updated.');
     }
+
+    return redirect()->route('accounts-payables.index')
+        ->with('success', 'Account Payable updated successfully.');
+}
 
     public function destroy($id)
     {

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+{{-- @extends('layouts.app')
 
 @section('content')
     @include('accounts-payables.form', [
@@ -6,4 +6,4 @@
         'categories' => $categories,
         'isEdit' => true
     ])
-@endsection
+@endsection --}}
