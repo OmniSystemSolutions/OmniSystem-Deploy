@@ -278,4 +278,123 @@ class ComponentController extends Controller
 
         return view('components.stock-card', compact('component', 'movements'));
     }
+
+    public function verifyImport(Request $request)
+{
+    $rows = $request->input('rows', []);
+    $errors = [];
+
+    // Get current user's branch
+    $branch = auth()->user()->branches()->first();
+    $branchId = current_branch_id();
+    $codes = [];
+
+    foreach ($rows as $index => $row) {
+
+        $rowErrors = [];
+
+        $code = $row['code'] ?? null;
+        $name = $row['name'] ?? null;
+
+        // Required fields
+        if (!$code) {
+            $rowErrors[] = 'SKU is required';
+        }
+
+        if (!$name) {
+            $rowErrors[] = 'Component name is required';
+        }
+
+        // Duplicate inside uploaded file
+        if (in_array($code, $codes)) {
+            $rowErrors[] = 'Duplicate SKU in file';
+        } else {
+            $codes[] = $code;
+        }
+
+        // Check if component exists
+        $component = Component::where('code', $code)->first();
+
+        if ($component && $branchId) {
+
+            // Check if component already exists in this branch
+            $exists = BranchComponent::where('branch_id', $branchId)
+                ->where('component_id', $component->id)
+                ->exists();
+
+            if ($exists) {
+                $rowErrors[] = 'Component already exists in this branch';
+            }
+        }
+
+        if (!empty($rowErrors)) {
+            $errors[$index] = $rowErrors;
+        }
+    }
+
+    return response()->json([
+        'success' => true,
+        'errors' => $errors
+    ]);
+}
+
+    public function import(Request $request)
+{
+    try {
+
+        $branch = current_branch_id();
+
+        if (!$branch) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User has no branch assigned.'
+            ]);
+        }
+
+        $rows = $request->all(); // ✅ get JSON body
+
+        foreach ($rows as $row) {
+
+            if (($row['status'] ?? '') !== 'ready') {
+                continue;
+            }
+
+            $component = Component::firstOrCreate(
+                ['code' => $row['code']],
+                [
+                    'name' => $row['name'],
+                ]
+            );
+
+            $exists = BranchComponent::where('branch_id', $branch)
+                ->where('component_id', $component->id)
+                ->exists();
+
+            if ($exists) {
+                continue;
+            }
+
+            BranchComponent::create([
+                'branch_id' => $branch,
+                'component_id' => $component->id,
+                'onhand' => $row['onhand'] ?? 0,
+                'cost' => $row['cost'] ?? 0,
+                'price' => $row['price'] ?? 0,
+                'status' => 'active',
+                'for_sale' => $row['for_sale'] ?? false,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true
+        ]);
+
+    } catch (\Exception $e) {
+
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
+        ]);
+    }
+}
 }
