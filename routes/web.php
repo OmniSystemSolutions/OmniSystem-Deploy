@@ -233,6 +233,8 @@ Route::delete('/components/{id}', [ComponentController::class, 'destroy'])->name
 Route::put('/components/{component}/archive', [ComponentController::class, 'archive'])->name('components.archive');
 Route::put('/components/{component}/restore', [ComponentController::class, 'restore'])->name('components.restore');
 Route::get('/components/{id}/stock-card', [ComponentController::class, 'stockCard'])->name('components.stock-card');
+Route::post('/components/verify-import', [ComponentController::class, 'verifyImport']);
+Route::post('/components/import', [ComponentController::class, 'import']);
 
 Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
 Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');

@@ -40,6 +40,7 @@
                               <!-- File Input -->
                               <input
                                  type="file"
+                                 ref="importFile"
                                  @change="handleFileUpload"
                                  accept=".csv, .xlsx"
                                  class="form-control mb-3"
@@ -48,6 +49,9 @@
                               Selected: @{{ importFileName }}
                               </small>
                            </div>
+                           <button type="button" @click="resetImport(true)" class="btn btn-secondary">
+                              Reset
+                           </button>
                            <div>
                               <a href="/import/product_sample/import_for_products.csv"
                                  class="btn btn-info btn-sm"
@@ -91,7 +95,7 @@
                                           <span v-else class="text-muted">Pending</span>
                                           </td>
                                           <td>
-                                          <button class="btn btn-sm btn-danger" @click="removeRow(index)">Remove</button>
+                                          <button class="btn btn-sm btn-danger" @click="removeRow($event, index)">Remove</button>
                                           </td>
                                        </tr>
                                     </tbody>
@@ -1164,6 +1168,7 @@ handleFileUpload(event) {
       const text = e.target.result
       const delimiter = text.includes('\t') ? '\t' : ','
       const lines = text.trim().split(/\r?\n/)
+
       const headers = lines.shift()
         .split(delimiter)
         .map(h => h.trim().toLowerCase().replace(/\s+/g, '_'))
@@ -1174,6 +1179,7 @@ handleFileUpload(event) {
         headers.forEach((h, i) => obj[h] = values[i] ? values[i].trim() : '')
         return obj
       })
+
     } else {
       const data = new Uint8Array(e.target.result)
       const workbook = XLSX.read(data, { type: 'array' })
@@ -1181,6 +1187,7 @@ handleFileUpload(event) {
       const worksheet = workbook.Sheets[sheetName]
 
       const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' })
+
       jsonData = rawData.map(row => {
         const normalizedRow = {}
         Object.keys(row).forEach(key => {
@@ -1191,15 +1198,18 @@ handleFileUpload(event) {
       })
     }
 
-    // Map and replace the reactive array entirely
     this.importRows = jsonData.map(row => ({
       code: row.sku || '',
       name: row.product_name || row.name || '',
       category: row.category ? { name: row.category } : null,
-      subcategory: row.sub_category || row.subcategory ? { name: row.sub_category || row.subcategory } : null,
+      subcategory: row.sub_category || row.subcategory
+        ? { name: row.sub_category || row.subcategory }
+        : null,
       quantity: Number(row.quantity || 1),
       price: Number(row.price || 0),
-      unit: row.unit && row.unit.toString().toLowerCase() !== 'n/a' ? { name: row.unit } : { name: 'pcs' },
+      unit: row.unit && row.unit.toString().toLowerCase() !== 'n/a'
+        ? { name: row.unit }
+        : { name: 'pcs' },
       status: 'pending',
       errors: []
     }))
@@ -1211,9 +1221,12 @@ handleFileUpload(event) {
   else reader.readAsArrayBuffer(this.importFile)
 },
 
-removeRow(index) {
-    this.importRows.splice(index, 1)
-  },
+// Remove row (prevent form submit)
+removeRow(event, index) {
+  if (event) event.preventDefault()
+
+  this.importRows.splice(index, 1)
+},
 
 // Verify against database
 async verifyImport() {
@@ -1235,7 +1248,7 @@ async verifyImport() {
       body: JSON.stringify({ rows: this.importRows })
     })
 
-    const result = await response.json()   // ✅ DEFINE result HERE
+    const result = await response.json()
 
     this.importRows = this.importRows.map((row, index) => {
       if (result.errors && result.errors[index]) {
@@ -1246,7 +1259,7 @@ async verifyImport() {
       return row
     })
 
-    this.importVerified = true   // ✅ enable submit logic
+    this.importVerified = true
 
     Swal.close()
 
@@ -1257,8 +1270,7 @@ async verifyImport() {
   }
 },
 
-
-  async submitImport() {
+async submitImport() {
 
   const validRows = this.importRows.filter(r => r.status === 'ready')
 
@@ -1274,9 +1286,7 @@ async verifyImport() {
     title: 'Importing...',
     text: 'Please wait while we save your data.',
     allowOutsideClick: false,
-    didOpen: () => {
-      Swal.showLoading()
-    }
+    didOpen: () => Swal.showLoading()
   })
 
   try {
@@ -1292,21 +1302,22 @@ async verifyImport() {
 
     Swal.close()
 
-    if (result.success) {
+if (result.success) {
+  // Show success Swal and refresh page after user clicks OK
+  Swal.fire({
+    icon: 'success',
+    title: 'Import Successful',
+    text: 'Products have been imported successfully!'
+  }).then(() => {
+    // Reset import (optional, since page reloads)
+    this.resetImport(false)
+    // Refresh the page
+    window.location.reload()
+  })
 
-      await Swal.fire({
-        icon: 'success',
-        title: 'Import Successful',
-        text: 'Products have been imported successfully!'
-      })
-
-      // Optional: reset table
-      this.importRows = []
-      this.importVerified = false
-
-    } else {
-      Swal.fire('Error', result.message || 'Import failed.', 'error')
-    }
+} else {
+  Swal.fire('Error', result.message || 'Import failed.', 'error')
+}
 
   } catch (error) {
     Swal.close()
@@ -1314,15 +1325,28 @@ async verifyImport() {
     console.error(error)
   }
 },
-  resetImport() {
-    this.importFile = null
-    this.importFileName = ''
-    this.importPreview = []
-    this.importVerified = false
-    if (this.$refs.importFile) {
-      this.$refs.importFile.value = null
-    }
-  },
+
+// Reset Import
+resetImport(showModal = false) {
+  this.importFile = null
+  this.importRows = []
+  this.importVerified = false
+
+  if (this.$refs.importFile) {
+    this.$refs.importFile.value = null
+  }
+
+  this.importFileName = ''
+  this.importPreview = []
+
+  if (showModal) {
+    Swal.fire({
+      icon: 'info',
+      title: 'Reset Complete',
+      text: 'Import table and uploaded file have been cleared.'
+    })
+  }
+},
       setStatus(status) {
          console.log("Status filter changed to:", status);
             this.statusFilter = status;
