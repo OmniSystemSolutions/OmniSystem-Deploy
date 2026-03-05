@@ -217,9 +217,8 @@ Route::delete('/products/{id}', [ProductController::class, 'destroy'])->name('pr
 Route::put('/products/{product}/archive', [ProductController::class, 'archive'])->name('products.archive');
 Route::put('/products/{product}/restore', [ProductController::class, 'restore'])->name('products.restore');
 Route::get('/products/{id}/product-stock-card', [ProductController::class, 'stockCard'])->name('products.stock-card');
+Route::post('/products/verify-import', [ProductController::class, 'verify'])->name('products.verify-import');
 Route::post('/products/import', [ProductController::class, 'import'])->name('products.import');
-Route::post('/products/import/verify', [ProductController::class, 'verifyImport'])->name('products.verify-import');
-Route::post('/products/import/check', [ProductController::class, 'checkImportDuplicates']);
 
 
 
@@ -233,7 +232,7 @@ Route::put('/components/{component}', [ComponentController::class, 'update'])->n
 Route::delete('/components/{id}', [ComponentController::class, 'destroy'])->name('components.destroy');
 Route::put('/components/{component}/archive', [ComponentController::class, 'archive'])->name('components.archive');
 Route::put('/components/{component}/restore', [ComponentController::class, 'restore'])->name('components.restore');
-Route::get('/components/{id}/component-stock-card', [ComponentController::class, 'stockCard'])->name('components.stock-card');
+Route::get('/components/{id}/stock-card', [ComponentController::class, 'stockCard'])->name('components.stock-card');
 
 Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
 Route::post('/categories', [CategoryController::class, 'store'])->name('categories.store');

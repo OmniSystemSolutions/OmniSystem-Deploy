@@ -39,8 +39,9 @@ class AccountPayableController extends Controller
         $currentBranchId = $currentBranch->id ?? ($branches->first()->id ?? null);
 
         $taxes = Tax::all();
+        $isEdit = false;
 
-        return view('accounts-payables.form', compact('categories', 'branches', 'currentBranchId', 'taxes'));
+        return view('accounts-payables.form', compact('categories', 'branches', 'currentBranchId', 'taxes','isEdit'));
     }
 
     public function store(Request $request)

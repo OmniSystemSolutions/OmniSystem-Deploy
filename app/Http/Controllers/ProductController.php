@@ -296,85 +296,151 @@ public function fetchProducts(Request $request)
     ]);
 }
 
-    public function verify(Request $request)
+   public function verify(Request $request)
     {
-        $request->validate([
-            'file' => 'required|mimes:csv,txt'
+       $request->validate([
+            'rows' => 'required|array',
         ]);
 
-        $rows = array_map('str_getcsv', file($request->file));
-        $header = array_map('trim', array_shift($rows));
+        $rows = $request->rows;
+        $branchId = current_branch_id(); // get current branch
 
-        $preview = [];
-        $errors  = [];
+        $errors = [];
 
         foreach ($rows as $index => $row) {
-            $data = array_combine($header, $row);
+            $code = $row['code'] ?? null;
+            $name = $row['name'] ?? null;
 
-            $category = Category::where('name', $data['Category'])->first();
-            $subcategory = Subcategory::where('name', $data['Subcategory'])->first();
+            if (!$code && !$name) continue;
 
-            $rowErrors = [];
+            // Check if product exists in BranchProduct for this branch
+            $exists = BranchProduct::whereHas('product', function($q) use ($code, $name) {
+                if ($code) $q->where('code', $code);
+                if ($name) $q->orWhere('name', $name);
+            })
+            ->where('branch_id', $branchId)
+            ->exists();
 
-            if (!$category) $rowErrors[] = 'Category not found';
-            if (!$subcategory) $rowErrors[] = 'Subcategory not found';
-
-            $preview[] = [
-                'row' => $index + 2,
-                'sku' => $data['SKU'],
-                'name' => $data['Name'],
-                'category' => $data['Category'],
-                'subcategory' => $data['Subcategory'],
-                'quantity' => (float) $data['Quantity'],
-                'unit' => $data['Unit'],
-                'price' => (float) $data['Price'],
-                'errors' => $rowErrors,
-                'valid' => empty($rowErrors),
-            ];
+            if ($exists) {
+                $errors[$index] = "Duplicate SKU or Name found in this branch";
+            }
         }
 
-        return response()->json([
-            'preview' => $preview,
-            'can_submit' => collect($preview)->every(fn ($r) => $r['valid'])
-        ]);
+        return response()->json(['errors' => $errors]);
     }
-
-    public function checkImportDuplicates(Request $request)
-{
-    $rows = $request->rows;
-
-    $skus  = collect($rows)->pluck('code')->filter();
-    $names = collect($rows)->pluck('name')->filter();
-
-    $existingSkus = Product::whereIn('code', $skus)->pluck('code')->toArray();
-    $existingNames = Product::whereIn('name', $names)->pluck('name')->toArray();
-
-    return response()->json([
-        'existingSkus'  => $existingSkus,
-        'existingNames' => $existingNames,
-    ]);
-}
 
 
     public function import(Request $request)
     {
-        $file = $request->file('file');
-        $rows = array_map('str_getcsv', file($file));
+        $request->validate([
+            'rows' => 'required'
+        ]);
 
-        foreach ($rows as $i => $row) {
-            if ($i === 0) continue; // skip header
+        $rows = json_decode($request->rows, true);
+        $branchId = current_branch_id();
 
-            Product::updateOrCreate(
-                ['code' => $row[0]],
-                [
-                    'name' => $row[1],
-                    'category_id' => $row[2],
-                    'subcategory_id' => $row[3],
-                    'status' => 'active'
-                ]
-            );
+        DB::beginTransaction();
+
+        try {
+
+            foreach ($rows as $row) {
+
+                /*
+                |--------------------------------------------------------------------------
+                | 1️⃣ CREATE OR GET CATEGORY
+                |--------------------------------------------------------------------------
+                */
+
+                $category = null;
+
+                if (!empty($row['category']['name'])) {
+                    $category = Category::firstOrCreate(
+                        ['name' => $row['category']['name']],
+                        ['status' => 'active']
+                    );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | 2️⃣ CREATE OR GET SUBCATEGORY
+                |--------------------------------------------------------------------------
+                */
+
+                $subcategory = null;
+
+                if (!empty($row['subcategory']['name']) && $category) {
+                    $subcategory = SubCategory::firstOrCreate(
+                        [
+                            'name' => $row['subcategory']['name'],
+                            'category_id' => $category->id
+                        ],
+                        ['status' => 'active']
+                    );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | 3️⃣ CREATE OR GET UNIT
+                |--------------------------------------------------------------------------
+                */
+
+                $unit = null;
+
+                if (!empty($row['unit']['name'])) {
+                    $unit = Unit::firstOrCreate(
+                        ['name' => $row['unit']['name']]
+                    );
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | 4️⃣ CREATE OR UPDATE PRODUCT
+                |--------------------------------------------------------------------------
+                */
+
+                $product = Product::updateOrCreate(
+                    ['code' => $row['code']],
+                    [
+                        'name' => $row['name'],
+                        'category_id' => $category?->id,
+                        'subcategory_id' => $subcategory?->id,
+                        'status' => 'active'
+                    ]
+                );
+
+                /*
+                |--------------------------------------------------------------------------
+                | 5️⃣ CREATE OR UPDATE BRANCH PRODUCT
+                |--------------------------------------------------------------------------
+                */
+
+                BranchProduct::updateOrCreate(
+                    [
+                        'branch_id'  => $branchId,
+                        'product_id' => $product->id,
+                    ],
+                    [
+                        'unit_id'   => $unit?->id,
+                        'quantity'  => $row['quantity'] ?? 0,
+                        'price'     => $row['price'] ?? 0,
+                        'status'    => 'active',
+                        'type'      => 'simple',
+                    ]
+                );
+            }
+
+            DB::commit();
+
+            return response()->json(['success' => true]);
+
+        } catch (\Exception $e) {
+
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json(['success' => true]);
     }
 }

@@ -35,14 +35,15 @@
                      <div class="col-12 mb-4">
                         <div class="d-flex align-items-center gap-3 flex-wrap">
                            <div class="flex-grow-1">
-                              <label class="form-label">Choose CSV file</label>
+                              <label class="form-label">Choose CSV / Excel file</label>
+                             
+                              <!-- File Input -->
                               <input
                                  type="file"
-                                 class="form-control"
-                                 accept=".csv"
-                                 ref="importFile"
-                                 @change="handleFileChange"
-                                 />
+                                 @change="handleFileUpload"
+                                 accept=".csv, .xlsx"
+                                 class="form-control mb-3"
+                              />
                               <small class="text-muted" v-if="importFileName">
                               Selected: @{{ importFileName }}
                               </small>
@@ -61,45 +62,37 @@
                         <div class="list-group">
                            <div class="list-group-item p-0">
                               <div class="table-responsive import-table-container">
-                                 <table class="table table-sm table-bordered mb-0" id="import-table">
-                                    <!-- TABLE HEADER -->
+                                 <table class="table table-bordered" v-if="importRows.length">
                                     <thead>
                                        <tr>
-                                          <th class="text-center" style="width:40px">Action</th>
                                           <th>SKU</th>
                                           <th>Name</th>
                                           <th>Category</th>
-                                          <th>Sub Category</th>
+                                          <th>Subcategory</th>
                                           <th>Quantity</th>
-                                          <th>Unit</th>
                                           <th>Price</th>
+                                          <th>Unit</th>
+                                          <th>Status</th>
+                                          <th>Action</th>
                                        </tr>
                                     </thead>
-                                    <!-- TABLE BODY -->
                                     <tbody>
-                                       <tr v-if="!importRows.length">
-                                          <td colspan="8" class="text-center text-muted py-4">
-                                             No data to upload yet
-                                          </td>
-                                       </tr>
                                        <tr v-for="(row, index) in importRows" :key="index">
-                                          <!-- Remove button -->
-                                          <td class="text-center">
-                                             <button
-                                                type="button"
-                                                class="btn btn-link text-danger p-0"
-                                                @click="removeImportRow(index)"
-                                                >
-                                             <i class="i-Close"></i>
-                                             </button>
-                                          </td>
                                           <td>@{{ row.code }}</td>
                                           <td>@{{ row.name }}</td>
-                                          <td>@{{ row.category }}</td>
-                                          <td>@{{ row.subcategory }}</td>
+                                          <td>@{{ row.category ? row.category.name : '' }}</td>
+                                          <td>@{{ row.subcategory ? row.subcategory.name : '' }}</td>
                                           <td>@{{ row.quantity }}</td>
-                                          <td>@{{ row.unit?.name }}</td>
-                                          <td>@{{ Number(row.price || 0).toFixed(2) }}</td>
+                                          <td>@{{ row.price }}</td>
+                                          <td>@{{ row.unit ? row.unit.name : '' }}</td>
+                                          <td>
+                                          <span v-if="row.status === 'ready'" class="text-success font-weight-bold">✔ Ready</span>
+                                          <span v-else-if="row.status === 'duplicate'" class="text-danger font-weight-bold">⚠ Duplicate</span>
+                                          <span v-else class="text-muted">Pending</span>
+                                          </td>
+                                          <td>
+                                          <button class="btn btn-sm btn-danger" @click="removeRow(index)">Remove</button>
+                                          </td>
                                        </tr>
                                     </tbody>
                                  </table>
@@ -110,15 +103,13 @@
                      <!-- Actions -->
                      <div class="col-12">
                         <div class="d-flex gap-2 justify-content-end">
-                           <button type="button"
-                              class="btn btn-outline-secondary"
-                              :disabled="!importFile"
-                              @click="verifyImport">
-                           Verify Now
+                           <button type="button" class="btn btn-primary" @click="verifyImport">
+                              Verify
                            </button>
                            <button type="submit"
-                              class="btn btn-primary"
-                              :disabled="!importVerified">
+                                 class="btn btn-primary"
+                                 :disabled="!canSubmit"
+                                 @click.prevent="submitImport">
                            Submit
                            </button>
                         </div>
@@ -243,15 +234,16 @@
                               <i class="i-File-Excel"></i> Export
                               </button>
                               {{-- Import button: hide if archived --}}
-                              {{-- @if ($status !== 'archived')
-                              <button
+                              {{-- @if ($status !== 'archived') --}}
+                              <button 
+                                 v-if="statusFilter !== 'archived'"
                                  type="button"
                                  class="btn btn-info m-1 btn-sm"
                                  @click="openImportModal"
                                  >
                               <i class="i-Upload"></i> Import
                               </button>
-                              @endif --}}
+                              {{-- @endif --}}
                               {{-- Add button: hide if archived --}}
                               {{-- @if ($status !== 'archived') --}}
                               <button type="button" class="btn mx-1 btn-btn btn-primary btn-icon" onclick="window.location='{{ url('products/create') }}'">
@@ -1044,6 +1036,11 @@ function markAsUnread(remarkId, productId) {
       }
    },
    computed: {
+      canSubmit() {
+    if (!this.importVerified) return false
+    if (!this.importRows.length) return false
+    return !this.importRows.some(r => r.status !== 'ready')
+  },
   visibleColumns() {
     return this.columns.filter(col => !col.hidden);
   },
@@ -1145,81 +1142,178 @@ function markAsUnread(remarkId, productId) {
     reader.onload = (evt) => {
       const text = evt.target.result
       this.importPreview = text
-        .split('\n')
-        .filter(row => row.trim() !== '')
+  .split('\n')
+  .filter(row => row.trim() !== '')
         .slice(0, 10) // preview first 10 rows
     }
     reader.readAsText(this.importFile)
   },
 
-  verifyImport() {
+ // Upload & auto-display
+handleFileUpload(event) {
+  this.importFile = event.target.files[0]
   if (!this.importFile) return
 
   const reader = new FileReader()
+  const isCSV = this.importFile.name.endsWith('.csv')
 
   reader.onload = async (e) => {
-    const lines = e.target.result.trim().split('\n')
-    const headers = lines.shift().split(',').map(h => h.trim().toLowerCase())
+    let jsonData = []
 
-    const parsedRows = lines.map(line => {
-      const values = line.split(',').map(v => v.trim())
-      const row = {}
+    if (isCSV) {
+      const text = e.target.result
+      const delimiter = text.includes('\t') ? '\t' : ','
+      const lines = text.trim().split(/\r?\n/)
+      const headers = lines.shift()
+        .split(delimiter)
+        .map(h => h.trim().toLowerCase().replace(/\s+/g, '_'))
 
-      headers.forEach((h, i) => {
-        row[h] = values[i] || null
+      jsonData = lines.map(line => {
+        const values = line.split(delimiter)
+        const obj = {}
+        headers.forEach((h, i) => obj[h] = values[i] ? values[i].trim() : '')
+        return obj
       })
+    } else {
+      const data = new Uint8Array(e.target.result)
+      const workbook = XLSX.read(data, { type: 'array' })
+      const sheetName = workbook.SheetNames[0]
+      const worksheet = workbook.Sheets[sheetName]
 
-      return {
-        code: row.sku,
-        name: row.name,
-        category: row.category,
-        subcategory: row.subcategory,
-        unit: row.unit?.name,
-        price: Number(row.price || 0),
-        onhand: Number(row.quantity || 0),
-        errors: [] // 🔥 important
-      }
-    })
+      const rawData = XLSX.utils.sheet_to_json(worksheet, { defval: '' })
+      jsonData = rawData.map(row => {
+        const normalizedRow = {}
+        Object.keys(row).forEach(key => {
+          const newKey = key.trim().toLowerCase().replace(/\s+/g, '_')
+          normalizedRow[newKey] = row[key]
+        })
+        return normalizedRow
+      })
+    }
 
-    // 🔎 CHECK DUPLICATES FROM SERVER
-    const res = await axios.post('/products/import/check', {
-      rows: parsedRows
-    })
+    // Map and replace the reactive array entirely
+    this.importRows = jsonData.map(row => ({
+      code: row.sku || '',
+      name: row.product_name || row.name || '',
+      category: row.category ? { name: row.category } : null,
+      subcategory: row.sub_category || row.subcategory ? { name: row.sub_category || row.subcategory } : null,
+      quantity: Number(row.quantity || 1),
+      price: Number(row.price || 0),
+      unit: row.unit && row.unit.toString().toLowerCase() !== 'n/a' ? { name: row.unit } : { name: 'pcs' },
+      status: 'pending',
+      errors: []
+    }))
 
-    const { existingSkus, existingNames } = res.data
-
-    this.importRows = parsedRows.map(r => {
-      if (existingSkus.includes(r.code)) {
-        r.errors.push('SKU already exists')
-      }
-
-      if (existingNames.includes(r.name)) {
-        r.errors.push('Name already exists')
-      }
-
-      return r
-    })
-
-    this.importVerified = this.importRows.every(r => r.errors.length === 0)
+    this.importVerified = false
   }
 
-  reader.readAsText(this.importFile)
+  if (isCSV) reader.readAsText(this.importFile)
+  else reader.readAsArrayBuffer(this.importFile)
+},
+
+removeRow(index) {
+    this.importRows.splice(index, 1)
+  },
+
+// Verify against database
+async verifyImport() {
+  if (!this.importRows.length) return
+
+  Swal.fire({
+    title: 'Verifying...',
+    allowOutsideClick: false,
+    didOpen: () => Swal.showLoading()
+  })
+
+  try {
+    const response = await fetch('/products/verify-import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({ rows: this.importRows })
+    })
+
+    const result = await response.json()   // ✅ DEFINE result HERE
+
+    this.importRows = this.importRows.map((row, index) => {
+      if (result.errors && result.errors[index]) {
+        row.status = 'duplicate'
+      } else {
+        row.status = 'ready'
+      }
+      return row
+    })
+
+    this.importVerified = true   // ✅ enable submit logic
+
+    Swal.close()
+
+  } catch (error) {
+    Swal.close()
+    console.error(error)
+    Swal.fire('Error', 'Verification failed.', 'error')
+  }
 },
 
 
-  submitImport() {
-    const formData = new FormData()
-    formData.append('file', this.importFile)
+  async submitImport() {
 
-    axios.post('/import/products', formData)
-      .then(() => {
-        this.$toast?.success?.('Products imported successfully')
-        this.resetImport()
-        bootstrap.Modal.getInstance(
-          document.getElementById('importModal')
-        ).hide()
+  const validRows = this.importRows.filter(r => r.status === 'ready')
+
+  if (!validRows.length) {
+    Swal.fire('No Data', 'There are no ready rows to import.', 'warning')
+    return
+  }
+
+  const formData = new FormData()
+  formData.append('rows', JSON.stringify(validRows))
+
+  Swal.fire({
+    title: 'Importing...',
+    text: 'Please wait while we save your data.',
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading()
+    }
+  })
+
+  try {
+    const response = await fetch('/products/import', {
+      method: 'POST',
+      headers: {
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: formData
+    })
+
+    const result = await response.json()
+
+    Swal.close()
+
+    if (result.success) {
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Import Successful',
+        text: 'Products have been imported successfully!'
       })
-  },
+
+      // Optional: reset table
+      this.importRows = []
+      this.importVerified = false
+
+    } else {
+      Swal.fire('Error', result.message || 'Import failed.', 'error')
+    }
+
+  } catch (error) {
+    Swal.close()
+    Swal.fire('Error', 'Something went wrong during import.', 'error')
+    console.error(error)
+  }
+},
   resetImport() {
     this.importFile = null
     this.importFileName = ''
