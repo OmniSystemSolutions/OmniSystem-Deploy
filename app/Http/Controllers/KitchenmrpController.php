@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BranchComponent;
 use App\Models\Component;
 use App\Models\KitchenMassProduction;
 use App\Models\Product;
@@ -111,17 +112,20 @@ class KitchenmrpController extends Controller
         // 🔥 Get next ID preview (for display only)
         $nextId = \App\Models\KitchenMassProduction::max('id') + 1;
 
-        // 🔹 All components, used as recipe ingredients
-            $components = Component::all();
+       $components = BranchComponent::with(['component', 'unit', 'station'])
+                    ->where('branch_id', $branchId)
+                    ->get();
 
             // 🔹 Only branch products
     $products = Product::with(['unit', 'station', 'recipes'])
-        ->where('type', 'simple')
-        ->whereHas('branchStocks', function ($q) use ($branchId) {
-            $q->where('branch_id', $branchId);
-        })
-        ->where('status', 'active')
-        ->get();
+    ->where('type', 'simple')
+    ->where('status', 'active')
+    ->whereIn('id', function ($query) use ($branchId) {
+        $query->select('product_id')
+            ->from('branch_products')
+            ->where('branch_id', $branchId);
+    })
+    ->get();
 
         $previewReferenceNo = 'MRP-' . $branchId . '-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
 

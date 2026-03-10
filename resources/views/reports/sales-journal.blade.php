@@ -51,7 +51,7 @@
                         </div>
                     </div>
                 </form>
-                    {{-- <button type="button" class="btn mt-2 btn-primary">Generate Z Report</button> --}}
+                    <button type="button" class="btn mt-2 btn-primary">Generate X Report</button>
                     <button type="button" class="btn mt-2 btn-primary" data-bs-toggle="modal" data-bs-target="#GenerateZReport">
     Generate Z Report
 </button>
@@ -355,7 +355,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const salesBreakdownChart = new Chart(ctx, {
         type: 'pie',
         data: {
-            labels: ['Walk-in', 'Pick-up', 'Delivery'],
+            labels: ['Walk-in', 'Take-out', 'Delivery'],
             datasets: [{
                 data: [2800, 550, 110], // static sample values
                 backgroundColor: ['#f44336', '#4caf50', '#2196f3'],
@@ -428,11 +428,10 @@ document.addEventListener('DOMContentLoaded', function () {
                                 <tr>
                                     <th>Date/Time</th>
                                     <th>Order ID</th>
-                                    <th>Table No.</th>
-                                    <th>No. of Pax</th>
-                                    <th>Total Charge</th>
-                                    {{-- <th>Amount Paid</th> --}}
+                                    <th>Cashier</th>
                                     <th>Invoice No.</th>
+                                    <th>Total Charge</th>
+                                    <th>Amount Paid</th>
                                     <th class="text-right">Action</th>
                                 </tr>
                             </thead>
@@ -442,11 +441,10 @@ document.addEventListener('DOMContentLoaded', function () {
                     <tr>
                         <td>{{ $order->created_at }}</td>
                         <td>{{ $order->id }}</td>
-                        <td>{{ $order->table_no }}</td>
-                        <td>{{ $order->number_pax }}</td>
-                        <td>₱{{ number_format($order->total_charge, 2) }}</td>
-                        {{-- <td>₱{{ number_format($order->total_payment_rendered, 2) }}</td> --}}
+                        <td>{{ $order->cashier->name }}</td>
                         <td>{{ $order->id }}</td>
+                        <td>₱{{ number_format($order->total_charge, 2) }}</td>
+                        <td>₱{{ number_format($order->total_payment_rendered, 2) }}</td>
                         {{-- <td>
                             <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
                                     data-bs-target="#invoiceModal{{ $order->id }}">
