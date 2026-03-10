@@ -408,7 +408,7 @@ class ComponentController extends Controller
             ]);
         }
 
-        $rows = $request->all(); // ✅ get JSON body
+        $rows = $request->all();
 
         foreach ($rows as $row) {
 
@@ -416,12 +416,58 @@ class ComponentController extends Controller
                 continue;
             }
 
+            /*
+            |--------------------------------------------------------------------------
+            | CATEGORY
+            |--------------------------------------------------------------------------
+            */
+
+            $category = Category::firstOrCreate([
+                'name' => $row['category']['name']
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | SUBCATEGORY
+            |--------------------------------------------------------------------------
+            */
+
+            $subcategory = Subcategory::firstOrCreate([
+                'name' => $row['subcategory']['name'],
+                'category_id' => $category->id
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | UNIT
+            |--------------------------------------------------------------------------
+            */
+
+            $unit = Unit::firstOrCreate([
+                'name' => $row['unit']
+            ]);
+
+            /*
+            |--------------------------------------------------------------------------
+            | COMPONENT
+            |--------------------------------------------------------------------------
+            */
+
             $component = Component::firstOrCreate(
                 ['code' => $row['code']],
                 [
                     'name' => $row['name'],
+                    'category_id' => $category->id,
+                    'subcategory_id' => $subcategory->id,
+                    'unit_id' => $unit->id
                 ]
             );
+
+            /*
+            |--------------------------------------------------------------------------
+            | BRANCH COMPONENT
+            |--------------------------------------------------------------------------
+            */
 
             $exists = BranchComponent::where('branch_id', $branch)
                 ->where('component_id', $component->id)
@@ -434,9 +480,9 @@ class ComponentController extends Controller
             BranchComponent::create([
                 'branch_id' => $branch,
                 'component_id' => $component->id,
-                'onhand' => $row['onhand'] ?? 0,
-                'cost' => $row['cost'] ?? 0,
-                'price' => $row['price'] ?? 0,
+                'onhand' => floatval($row['onhand'] ?? 0),
+                'cost' => floatval($row['cost'] ?? 0),
+                'price' => floatval($row['price'] ?? 0),
                 'status' => 'active',
                 'for_sale' => $row['for_sale'] ?? false,
             ]);
