@@ -12,6 +12,7 @@ use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use App\Models\BranchComponent;
 use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
@@ -24,47 +25,18 @@ class ProductController extends Controller
 /**
  * Fetch products based on status, search, pagination, and branch
  */
-public function fetchProducts(Request $request)
-{
+    public function fetchProducts(Request $request)
+    {
     // 🔥 DEFAULT STATUS HANDLED HERE
-   $status = $request->get('status', 'active');
+    $status = $request->get('status', 'active');
 
-    $perPage     = $request->get('perPage', 10);
-    $search      = $request->get('search');
-    $category    = $request->get('category');
-    $subcategory = $request->get('subcategory');
-    $type       = $request->get('type');
+        $perPage     = $request->get('perPage', 10);
+        $search      = $request->get('search');
+        $category    = $request->get('category');
+        $subcategory = $request->get('subcategory');
+        $type       = $request->get('type');
 
-    $branchId = current_branch_id();
-
-    if ($branchId == 1) {
-
-        $products = Product::with(['category', 'subcategory', 'unit', 'station'])
-            ->where('status', $status)
-            ->when($type, fn ($q) =>
-                $q->where('type', $type)
-            )
-            ->when($search, function ($query, $search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('products.name', 'like', "%{$search}%")
-                      ->orWhereHas('category', fn ($q) =>
-                          $q->where('name', 'like', "%{$search}%")
-                      )
-                      ->orWhereHas('subcategory', fn ($q) =>
-                          $q->where('name', 'like', "%{$search}%")
-                      );
-                });
-            })
-            ->when($category, fn ($q) =>
-                $q->where('category_id', $category)
-            )
-            ->when($subcategory, fn ($q) =>
-                $q->where('subcategory_id', $subcategory)
-            )
-            ->orderBy('products.created_at', 'desc')
-            ->paginate($perPage);
-
-    } else {
+        $branchId = current_branch_id();
 
         $products = Product::query()
             ->select([
@@ -83,12 +55,12 @@ public function fetchProducts(Request $request)
             ->when($search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('products.name', 'like', "%{$search}%")
-                      ->orWhereHas('category', fn ($q) =>
-                          $q->where('name', 'like', "%{$search}%")
-                      )
-                      ->orWhereHas('subcategory', fn ($q) =>
-                          $q->where('name', 'like', "%{$search}%")
-                      );
+                        ->orWhereHas('category', fn ($q) =>
+                            $q->where('name', 'like', "%{$search}%")
+                        )
+                        ->orWhereHas('subcategory', fn ($q) =>
+                            $q->where('name', 'like', "%{$search}%")
+                        );
                 });
             })
             ->when($category, fn ($q) =>
@@ -99,10 +71,9 @@ public function fetchProducts(Request $request)
             )
             ->orderBy('products.created_at', 'desc')
             ->paginate($perPage);
-    }
 
-    return response()->json($products);
-}
+        return response()->json($products);
+    }
 
 
 
@@ -113,73 +84,132 @@ public function fetchProducts(Request $request)
         $units = Unit::all();
         $stations = Station::all();
 
-        return view('products.create', compact('categories', 'subcategories', 'units', 'stations'));
+        $branch = current_branch_id(); // current branch
+
+        $components = BranchComponent::with('component.unit')
+            ->where('branch_id', $branch)
+            ->get()
+            ->map(function($bc) {
+                return [
+                    'id' => $bc->component_id,
+                    'name' => $bc->component->name,
+                    'unit' => $bc->component->unit->name ?? null,
+                    'cost' => $bc->cost,
+                ];
+            });
+
+        return view('products.create', compact(
+            'categories',
+            'subcategories',
+            'units',
+            'stations',
+            'components'
+        ));
     }
 
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'code' => 'required|string|unique:products,code',
-            'name' => 'required|string',
-            'price' => 'required|numeric',
+   public function store(Request $request)
+{
+    $validated = $request->validate([
+        'code' => 'required|string|unique:products,code',
+        'name' => 'required|string',
+        'price' => 'required|numeric',
+        'quantity' => 'required|numeric|min:0',
+        'station_id' => 'required|exists:stations,id',
+        'unit_id' => 'required|exists:units,id',
+        'category_id' => 'required|exists:categories,id',
+        'subcategory_id' => 'nullable|exists:subcategories,id',
+        'image' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
+        'recipes' => ['required', 'array', 'min:1'],
+        'recipes.*.component_id' => 'required|exists:components,id',
+        'recipes.*.quantity' => 'required|numeric|min:1',
+    ]);
 
-            'quantity'   => 'required|numeric|min:0',
-            'station_id' => 'required|exists:stations,id',
-            'unit_id'    => 'required|exists:units,id',
-
-            'category_id' => 'required|exists:categories,id',
-            'subcategory_id' => 'nullable|exists:subcategories,id',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
-
-            // Recipe validation
-            'recipes.component_id.*' => 'required|exists:components,id',
-            'recipes.quantity.*' => 'required|numeric',
-        ]);
-
-        // Handle image upload
-        if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('products', 'public');
-        }
-
-        // Create product
-        $product = Product::create($validated);
-
-         BranchProduct::create([
-            'branch_id'  => current_branch_id(),
-            'product_id' => $product->id,
-            'station_id' => $product->station_id,
-            'unit_id'    => $product->unit_id,
-            'quantity'   => $product->quantity,
-            'price'      => $product->price,
-            'status'     => 'active', // or whatever default you use
-        ]);
-
-        // Save recipes
-        if ($request->has('recipes')) {
-            foreach ($request->recipes['component_id'] as $index => $component_id) {
-                $quantity = $request->recipes['quantity'][$index];
-                $unit = $request->recipes['unit'][$index];
-                $product->recipes()->create([
-                    'component_id' => $component_id,
-                    'quantity' => $quantity,
-                ]);
-            }
-        }
-
-        return redirect()->route('products.index')->with('success', 'Product created with recipes.');
+    if ($request->hasFile('image')) {
+        $validated['image'] = $request->file('image')->store('products', 'public');
     }
+
+    $product = Product::create($validated);
+
+    BranchProduct::create([
+        'branch_id' => current_branch_id(),
+        'product_id' => $product->id,
+        'station_id' => $product->station_id,
+        'unit_id' => $product->unit_id,
+        'quantity' => $product->quantity,
+        'price' => $product->price,
+        'status' => 'active',
+    ]);
+
+    // Save recipes
+    if ($request->has('recipes')) {
+        foreach ($request->recipes as $recipeData) {
+            if (empty($recipeData['component_id']) || empty($recipeData['quantity'])) continue;
+
+            $product->recipes()->create([
+                'component_id' => $recipeData['component_id'],
+                'quantity' => $recipeData['quantity'],
+            ]);
+        }
+    }
+
+    return redirect()->route('products.index')->with('success', 'Product created with recipes.');
+}
 
     public function edit($id)
-    {
-        $product = Product::with('recipes')->findOrFail($id);
-        $categories = Category::where('status', 'active')->get();
-        $subcategories = Subcategory::all();
-        $components = Component::all();
-        $units = Unit::all();
-        $stations = Station::all();
+{
+    $branch = current_branch_id();
 
-        return view('products.edit', compact('product', 'categories', 'subcategories', 'components', 'units', 'stations'));
-    }
+    $branchProduct = BranchProduct::with(['product.recipes.component.unit'])
+        ->where('product_id', $id)
+        ->where('branch_id', $branch)
+        ->firstOrFail();
+
+    $product = $branchProduct->product;
+
+    $oldRecipes = $product->recipes->map(function ($r) use ($branch) {
+
+        $branchComponent = BranchComponent::where('component_id', $r->component_id)
+            ->where('branch_id', $branch)
+            ->first();
+
+        $cost = $branchComponent->cost ?? 0;
+
+        return [
+            'id' => $r->id,
+            'component_id' => $r->component_id,
+            'quantity' => $r->quantity,
+            'unit' => optional($r->component->unit)->name ?? null,
+            'cost' => $r->quantity * $cost,
+        ];
+    })->toArray();
+
+    $categories = Category::where('status', 'active')->get();
+    $subcategories = Subcategory::all();
+
+    $components = BranchComponent::with(['component.unit:id,name'])
+        ->where('branch_id', $branch)
+        ->get()
+        ->map(fn($bc) => [
+            'id' => $bc->component_id,
+            'name' => $bc->component->name,
+            'unit' => $bc->component->unit,
+            'cost' => $bc->cost
+        ]);
+
+    $units = Unit::all();
+    $stations = Station::all();
+
+    return view('products.edit', compact(
+        'product',
+        'branchProduct',
+        'categories',
+        'subcategories',
+        'components',
+        'units',
+        'stations',
+        'oldRecipes'
+    ));
+}
 
     public function update(Request $request, $id)
     {
@@ -422,6 +452,7 @@ public function fetchProducts(Request $request)
                     [
                         'unit_id'   => $unit?->id,
                         'quantity'  => $row['quantity'] ?? 0,
+                        'cost'      => $row['cost'] ?? 0,
                         'price'     => $row['price'] ?? 0,
                         'status'    => 'active',
                         'type'      => 'simple',

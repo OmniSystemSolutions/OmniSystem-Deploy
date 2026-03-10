@@ -18,7 +18,7 @@
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-        <form action="{{ route('components.update', $component->id) }}" method="POST" enctype="multipart/form-data">
+        <form id="updateComponentForm" action="{{ route('components.update', $component->id) }}" method="POST" enctype="multipart/form-data">
             @csrf
             @method('PUT')
             <div class="row">
@@ -88,7 +88,7 @@
                                                                 <span class="input-group-text">₱</span>
                                                             </div>
                                                             <input class="form-control" placeholder="0" id="cost" name="cost"
-                                                                value="{{ old('cost', $component->cost) }}" inputmode="decimal">
+                                                                value="{{ old('cost', $branchComponent->cost) }}" inputmode="decimal">
                                                         </div>
                                                     </fieldset>
                                                 </div>
@@ -101,7 +101,7 @@
                                                                 <span class="input-group-text">₱</span>
                                                             </div>
                                                             <input class="form-control" placeholder="0" id="price" name="price"
-                                                                value="{{ old('price', $component->price) }}" inputmode="decimal">
+                                                                value="{{ old('price', $branchComponent->price) }}" inputmode="decimal">
                                                         </div>
                                                     </fieldset>
                                                 </div>
@@ -111,7 +111,7 @@
                                                     <fieldset class="form-group">
                                                         <legend class="col-form-label pt-0">QTY on Hand *</legend>
                                                         <input class="form-control" placeholder="0" id="onhand" name="onhand"
-                                                            value="{{ old('onhand', $component->onhand) }}" inputmode="decimal">
+                                                            value="{{ old('onhand', $branchComponent->onhand) }}" inputmode="decimal">
                                                     </fieldset>
                                                 </div>
 
@@ -151,12 +151,8 @@
                                                 <div class="form-group">
                                                     <label for="supplier_id">Supplier *</label>
                                                     <div class="d-flex">
-                                                        <select class="form-control mr-2"
-                                                                id="supplier_id"
-                                                                name="supplier_id">
-                                                            <option value="" disabled {{ old('supplier_id', $component->supplier_id) ? '' : 'selected' }}>
-                                                                Select Supplier
-                                                            </option>
+                                                        <select class="form-control mr-2" id="supplier_id" name="supplier_id">
+                                                            <option value="">Select Supplier</option>
                                                             @foreach ($suppliers as $supplier)
                                                                 <option value="{{ $supplier->id }}"
                                                                     {{ old('supplier_id', $component->supplier_id) == $supplier->id ? 'selected' : '' }}>
@@ -164,7 +160,6 @@
                                                                 </option>
                                                             @endforeach
                                                         </select>
-
                                                         <button type="button"
                                                                 class="btn btn-outline-success btn-sm"
                                                                 onclick="toggleSupplierForm()">
@@ -569,5 +564,75 @@ function showFieldErrors(errors, inputPrefix, feedbackPrefix) {
         if (feedback) feedback.innerText = messages.join(' ');
     }
 }
+
+// Update Button
+document.getElementById('updateComponentForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = e.target;
+
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "Do you want to update this component?",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, update it!',
+        cancelButtonText: 'Cancel'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const formData = new FormData(form);
+
+            if (!formData.get('supplier_id')) {
+                formData.delete('supplier_id');
+            }
+
+            try {
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                });
+
+                const data = await res.json().catch(() => ({}));
+
+                if (!res.ok) {
+                    let messages = [];
+                    if (data.errors) {
+                        for (const [field, msgs] of Object.entries(data.errors)) {
+                            messages.push(`<strong>${field}</strong>: ${msgs.join(', ')}`);
+                        }
+                    }
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Update Failed',
+                        html: messages.join('<br>') || 'Something went wrong!',
+                    });
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Updated!',
+                    html: 'Component updated successfully!',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    willClose: () => {
+                        window.location.href = "{{ route('components.index') }}";
+                    }
+                });
+
+            } catch (err) {
+                console.error(err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error',
+                    html: err.message || 'Something went wrong!',
+                });
+            }
+        }
+    });
+});
 </script>
 @endsection

@@ -38,24 +38,19 @@ class ComponentController extends Controller
         $search   = $request->get('search');
         $branchId = current_branch_id();
 
-        if ($branchId == 1) {
-            $query = Component::with(['category', 'subcategory'])
-                ->where('status', $status);
-        } else {
-            $query = Component::query()
-                ->select([
-                    'components.*',
-                    'bc.onhand',
-                    'bc.cost',
-                    'bc.price',
-                    'bc.for_sale',
-                    'bc.status as status',
-                ])
-                ->join('branch_components as bc', 'bc.component_id', '=', 'components.id')
-                ->where('bc.branch_id', $branchId)
-                ->where('components.status', $status)
-                ->with(['category', 'subcategory']);
-        }
+        $query = Component::query()
+            ->select([
+                'components.*',
+                'bc.onhand',
+                'bc.cost',
+                'bc.price',
+                'bc.for_sale',
+                'bc.status as status',
+            ])
+            ->join('branch_components as bc', 'bc.component_id', '=', 'components.id')
+            ->where('bc.branch_id', $branchId)
+            ->where('components.status', $status)
+            ->with(['category', 'subcategory', 'unit']);
 
         $query->when($search, function ($query) use ($search) {
             $query->where(function ($q) use ($search) {
@@ -68,6 +63,12 @@ class ComponentController extends Controller
         $components = $query
             ->orderBy('components.created_at', 'desc')
             ->paginate($perPage);
+
+        // Map unit_id to unit name for frontend
+        $components->getCollection()->transform(function ($component) {
+            $component->unit = $component->unit?->name; // new field for Vue
+            return $component;
+        });
 
         return response()->json($components);
     }
@@ -123,46 +124,102 @@ class ComponentController extends Controller
 
     public function edit($id)
     {
-        $component     = Component::with('recipes')->findOrFail($id);
+        $branch = current_branch_id();
+
+        $branchComponent = BranchComponent::with('component.recipes')
+            ->where('branch_id', $branch)
+            ->where('component_id', $id)
+            ->firstOrFail();
+
+        $component     = $branchComponent->component;
         $categories    = Category::where('status', 'active')->get();
         $subcategories = Subcategory::all();
         $components    = Component::all();
         $suppliers     = Supplier::where('status', 'active')->get();
         $units         = Unit::all();
 
-        return view('components.edit', compact('component', 'categories', 'subcategories', 'components', 'suppliers', 'units'));
+        return view('components.edit', compact(
+            'component',
+            'branchComponent',
+            'categories',
+            'subcategories',
+            'components',
+            'suppliers',
+            'units'
+        ));
     }
 
     public function update(Request $request, Component $component)
-    {
-        $validated = $request->validate([
-            'code'           => 'required|string|unique:components,code,' . $component->id,
-            'name'           => 'required|string',
-            'brand_name'     => 'nullable|string|max:255',
-            'category_id'    => 'required|integer|exists:categories,id',
-            'subcategory_id' => 'nullable|integer|exists:subcategories,id',
-            'supplier_id'    => 'nullable|integer|exists:suppliers,id',
-            'cost'           => 'required|numeric',
-            'price'          => 'required|numeric',
-            'unit_id'       => 'required|integer|exists:units,id',
-            'onhand'         => 'required|numeric',
-            'image'          => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
-            'for_sale'       => 'nullable|boolean',
-        ]);
+{
+    $branch = current_branch_id();
+// dd($request->all());
+    $validated = $request->validate([
+        'code'           => 'required|string|unique:components,code,' . $component->id,
+        'name'           => 'required|string',
+        'brand_name'     => 'nullable|string|max:255',
+        'category_id'    => 'required|integer|exists:categories,id',
+        'subcategory_id' => 'nullable|integer|exists:subcategories,id',
+        'supplier_id'    => 'nullable|exists:suppliers,id',
+        'unit_id'        => 'required|integer|exists:units,id',
 
-        $validated['for_sale'] = $request->has('for_sale') ? 1 : 0;
+        // Branch fields
+        'cost'     => 'required|numeric',
+        'price'    => 'required|numeric',
+        'onhand'   => 'required|numeric',
+        'for_sale' => 'nullable|boolean',
 
-        if ($request->hasFile('image')) {
-            if ($component->image && Storage::disk('public')->exists($component->image)) {
-                Storage::disk('public')->delete($component->image);
-            }
-            $validated['image'] = $request->file('image')->store('components', 'public');
+        'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+    ]);
+
+    $validated['for_sale'] = $request->has('for_sale') ? 1 : 0;
+
+    /*
+    |------------------------------------------
+    | IMAGE (unchanged as requested)
+    |------------------------------------------
+    */
+    if ($request->hasFile('image')) {
+        if ($component->image && Storage::disk('public')->exists($component->image)) {
+            Storage::disk('public')->delete($component->image);
         }
 
-        $component->update($validated);
-
-        return redirect()->route('components.index')->with('success', 'Component updated successfully!');
+        $validated['image'] = $request->file('image')->store('components', 'public');
     }
+
+    /*
+    |------------------------------------------
+    | UPDATE GLOBAL COMPONENT DATA
+    |------------------------------------------
+    */
+    $component->update([
+        'code'           => $validated['code'],
+        'name'           => $validated['name'],
+        'brand_name'     => $validated['brand_name'],
+        'category_id'    => $validated['category_id'],
+        'subcategory_id' => $validated['subcategory_id'],
+        'supplier_id'    => $validated['supplier_id'] ?? null,
+        'unit_id'        => $validated['unit_id'],
+        'image'          => $validated['image'] ?? $component->image,
+    ]);
+
+    /*
+    |------------------------------------------
+    | UPDATE BRANCH COMPONENT ONLY
+    |------------------------------------------
+    */
+    BranchComponent::where('branch_id', $branch)
+        ->where('component_id', $component->id)
+        ->update([
+            'cost'     => $validated['cost'],
+            'price'    => $validated['price'],
+            'onhand'   => $validated['onhand'],
+            'for_sale' => $validated['for_sale'],
+        ]);
+
+    return redirect()
+        ->route('components.index')
+        ->with('success', 'Component updated successfully!');
+}
 
     public function destroy($id)
     {

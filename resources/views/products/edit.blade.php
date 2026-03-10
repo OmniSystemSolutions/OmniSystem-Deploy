@@ -1,6 +1,6 @@
 @extends('layouts.app')
 @section('content')
-<div class="main-content">
+<div class="main-content" id="app">
       <div>
          <div class="breadcrumb">
                <h1 class="mr-3">Edit Product</h1>
@@ -15,10 +15,17 @@
       <!----> 
       <div class="card mt-4">
          <div class="card-body">
-               <form action="{{ route('products.update', $product->id) }}" method="POST" id="productForm" enctype="multipart/form-data">
+               <form action="{{ route('products.update', $product->id) }}"
+                  method="POST"
+                  id="productForm"
+                  enctype="multipart/form-data"
+                  @submit.prevent="submitForm"
+               >
                   @csrf
                   @method('PUT')
 
+                  <input type="hidden" name="product_id" value="{{ $product->id }}">
+<input type="hidden" name="branch_product_id" value="{{ $branchProduct->id }}">
                   <div class="row">
                   <div class="top-wrapper" style="display: none;">
                   </div>
@@ -608,77 +615,99 @@
 
       <div class="col-md-12 mt-4">
       <h5>Ingredients</h5>
-      <table class="table table-bordered" id="recipeTable">
-         <thead>
-               <tr>
-                  <th>Component</th>
-                  <th>Quantity</th>
-                  <th>Unit</th>
-                  <th>Cost</th>
-                  <th>
-                  <button type="button" class="btn btn-success btn-sm" onclick="addRecipeRow()">+</button>
-                  </th>
-               </tr>
-         </thead>
-         <tbody>
-                  @foreach(array_filter($oldRecipes, fn($r) => !empty($r['component_id']) && $r['quantity'] > 0) as $i => $recipe)
-                     @php
-                           $recipeId = $recipe['id'] ?? '';
-                           $componentId = $recipe['component_id'] ?? null;
-                           $quantity = isset($recipe['quantity']) ? $recipe['quantity'] : 0;
 
-                           $comp = $components->firstWhere('id', $componentId);
-                           $unit = $comp?->unit ?? '';
-                           $baseCost = $comp?->cost ?? 0;
-                           $cost = floatval($quantity) * floatval($baseCost);
-                     @endphp
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Component</th>
+                <th>Quantity</th>
+                <th>Unit</th>
+                <th>Cost</th>
+                <th>
+                    <button type="button"
+                            class="btn btn-success btn-sm"
+                            @click="addRow()">
+                        +
+                    </button>
+                </th>
+            </tr>
+        </thead>
 
-                     <tr data-index="{{ $i }}">
-                           <input type="hidden" name="recipes[{{ $i }}][id]" value="{{ $recipeId }}">
+        <tbody>
+            <tr v-for="(row, index) in recipes" :key="index">
 
-                           <td>
-                              <select name="recipes[{{ $i }}][component_id]" 
-                                       class="form-control component-select" required>
-                                 @foreach($components as $component)
-                                       <option value="{{ $component->id }}" 
-                                             data-cost="{{ $component->cost }}" 
-                                             data-unit="{{ $component->unit }}"
-                                             {{ $component->id == $componentId ? 'selected' : '' }}>
-                                          {{ $component->name }}
-                                       </option>
-                                 @endforeach
-                              </select>
-                           </td>
+                <input type="hidden"
+                       :name="'recipes[' + index + '][id]'"
+                       v-model="row.id">
 
-                           <td>
-                              <input type="number" name="recipes[{{ $i }}][quantity]" step="0.01"
-                                       class="form-control recipe-quantity" 
-                                       value="{{ $quantity }}" required>
-                           </td>
+                <td>
+                    <select class="form-control"
+                            :name="'recipes[' + index + '][component_id]'"
+                            v-model="row.component_id"
+                            @change="updateRow(row)">
 
-                           {{-- ✅ Unit comes from component, display only --}}
-                           <td>
-                              <input type="text" name="recipes[{{ $i }}][unit]" class="form-control component-unit" 
-                                       value="{{ $unit }}" readonly>
-                           </td>
+                        <option value="">Select Component</option>
 
-                           <td>
-                              <input type="text" class="form-control component-cost"
-                                       value="{{ number_format($cost, 2) }}" readonly>
-                           </td>
+                        <option v-for="c in components"
+                                :key="c.id"
+                                :value="c.id"
+                                :data-cost="c.cost"
+                                :data-unit="c.unit">
 
-                           <td>
-                              <button type="button" class="btn btn-danger btn-sm remove-row">x</button>
-                           </td>
-                     </tr>
-                  @endforeach
-               </tbody>
-      </table>
+                            @{{ c.name }}
 
-      <div class="row mt-2">
-         <div class="col-md-9 text-right"><label><strong>Total Cost:</strong></label></div>
-         <div class="col-md-2"><input type="text" id="totalCost" class="form-control" value="0.00" readonly></div>
-      </div>
+                        </option>
+                    </select>
+                </td>
+
+                <td>
+                    <input type="number"
+                           step="0.01"
+                           class="form-control"
+                           :name="'recipes[' + index + '][quantity]'"
+                           v-model="row.quantity"
+                           @input="updateRow(row)">
+                </td>
+
+                <td>
+                    <input type="text"
+                           class="form-control"
+                           :name="'recipes[' + index + '][unit]'"
+                           v-model="row.unit"
+                           readonly>
+                </td>
+
+                <td>
+                    <input type="text"
+                           class="form-control"
+                           v-model="row.cost"
+                           readonly>
+                </td>
+
+                <td>
+                    <button type="button"
+                            class="btn btn-danger btn-sm"
+                            @click="removeRow(index)">
+                        x
+                    </button>
+                </td>
+
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="row mt-2">
+        <div class="col-md-9 text-right">
+            <label><strong>Total Cost:</strong></label>
+        </div>
+
+        <div class="col-md-2">
+            <input type="text"
+                   class="form-control"
+                   :value="totalCost"
+                   readonly>
+        </div>
+    </div>
 
          <div class="mt-3 col-md-12">
                <div class="mr-2">
@@ -691,124 +720,7 @@
       </div>
                </form>
 
-      <script>
-         // components must be passed from controller as $components
-         let components = @json($components);
-
-         function createComponentOptionsHTML(selectedId = null) {
-               return components.map(c => {
-                  const sel = (selectedId && selectedId == c.id) ? 'selected' : '';
-                  return `<option value="${c.id}" data-cost="${c.cost}" data-unit="${c.unit}" ${sel}>${c.name}</option>`;
-               }).join('');
-         }
-
-         function nextRowIndex() {
-               const rows = document.querySelectorAll('#recipeTable tbody tr');
-               if (rows.length === 0) return 0;
-               let max = -1;
-               rows.forEach(r => {
-                  const idx = parseInt(r.getAttribute('data-index') ?? -1, 10);
-                  if (!isNaN(idx) && idx > max) max = idx;
-               });
-               return max + 1;
-         }
-
-         function addRecipeRow(prefill = {}) {
-               const tbody = document.querySelector('#recipeTable tbody');
-               const i = nextRowIndex();
-               const compId = prefill.component_id ?? null;
-               const qty = prefill.quantity ?? '';
-               const unit = prefill.unit ?? '';
-               const costVal = prefill.cost ?? '';
-
-               const tr = document.createElement('tr');
-               tr.setAttribute('data-index', i);
-
-               tr.innerHTML = `
-                  <input type="hidden" name="recipes[${i}][id]" value="${prefill.id ?? ''}">
-                  <td>
-                           <select name="recipes[${i}][component_id]" class="form-control component-select" required>
-                           <option value="" disabled selected> </option>
-                           ${createComponentOptionsHTML(compId)}   
-                     </select>
-                  </td>
-                  <td><input type="number" name="recipes[${i}][quantity]" class="form-control recipe-quantity" step="0.01" value="${qty}" required></td>
-                  <td><input type="text" name="recipes[unit][]" class="form-control component-unit" readonly></td>
-                  <td><input type="text" name="recipes[${i}][cost]" class="form-control component-cost" readonly value="${costVal}"></td>
-                  <td><button type="button" class="btn btn-danger btn-sm remove-row">x</button></td>
-               `;
-
-               tbody.appendChild(tr);
-               initRow(tr);
-         }
-
-         function initRow(tr) {
-               // initialize select2 if available
-               if (typeof $ !== 'undefined' && $(tr).find('.component-select').select2) {
-                  $(tr).find('.component-select').select2({ width: '100%' });
-               }
-
-               const select = tr.querySelector('.component-select');
-               const qtyInput = tr.querySelector('.recipe-quantity');
-               const unitInput = tr.querySelector('.component-unit');
-               const costInput = tr.querySelector('.component-cost');
-               const removeBtn = tr.querySelector('.remove-row');
-
-         function updateFields() {
-                  const selectedOption = select.options[select.selectedIndex];
-                  const baseCost = parseFloat(selectedOption?.getAttribute('data-cost')) || 0;
-                  const unit = selectedOption?.getAttribute('data-unit') || '';
-
-                  // ✅ update unit (display only, never from recipe)
-                  if (unitInput) unitInput.value = unit;
-
-                  // ✅ calculate cost = (component cost × recipe qty)
-                  const qty = parseFloat(qtyInput.value) || 0;
-                  costInput.value = (baseCost * qty).toFixed(2);
-
-                  updateTotalCost();
-                  }
-
-                  // ✅ Event bindings
-                  select.addEventListener('change', updateFields);
-                  qtyInput.addEventListener('input', updateFields);
-                  removeBtn.addEventListener('click', function () {
-                     tr.remove();
-                     updateTotalCost();
-                  });
-
-                  // ✅ Initialize values for prefilled rows
-                  updateFields();
-               }
-
-               function updateCost() {
-                  const selectedOption = select.options[select.selectedIndex];
-                  const baseCost = parseFloat(selectedOption?.getAttribute('data-cost')) || 0;
-                  const qty = parseFloat(qtyInput.value) || 0;
-                  costInput.value = (baseCost * qty).toFixed(2);
-                  updateTotalCost();
-               }
-
-         function updateTotalCost() {
-               let total = 0;
-               document.querySelectorAll('.component-cost').forEach(input => {
-                  total += parseFloat(input.value) || 0;
-               });
-               const totalElem = document.getElementById('totalCost') || document.getElementById('grandTotal');
-               if (totalElem) totalElem.value = total.toFixed(2);
-         }
-
-         document.addEventListener('DOMContentLoaded', function() {
-               // init existing rows (the Blade-rendered rows)
-               document.querySelectorAll('#recipeTable tbody tr').forEach(tr => initRow(tr));
-               updateTotalCost();
-
-               // if no rows exist, add one blank row
-               if (document.querySelectorAll('#recipeTable tbody tr').length === 0) {
-                  addRecipeRow();
-               }
-         });
-      </script>
+      
          <div class="row">
 
                <div class="col-md-10 mt-3 mt-md-0">
@@ -833,4 +745,141 @@
 </span>
 </div>
 </div>
+<script>
+new Vue({
+    el: '#app',
+
+    data: {
+        components: @json($components),
+        recipes: []
+    },
+
+    computed: {
+        totalCost() {
+            return this.recipes.reduce((sum, row) => {
+                return sum + (parseFloat(row.cost) || 0);
+            }, 0).toFixed(2);
+        }
+    },
+
+    methods: {
+      async submitForm() {
+
+        const form = document.getElementById('productForm');
+        const formData = new FormData(form);
+
+        const confirm = await Swal.fire({
+            title: 'Are you sure?',
+            text: 'Do you want to update this product?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, update it!',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        try {
+
+            const response = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                },
+                body: formData
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+
+                let errors = [];
+
+                if (data.errors) {
+                    Object.entries(data.errors).forEach(([field, msgs]) => {
+                        errors.push(`<strong>${field}</strong>: ${msgs.join(', ')}`);
+                    });
+                }
+
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    html: errors.join('<br>') || 'Something went wrong.'
+                });
+
+                return;
+            }
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Updated!',
+                text: 'Product updated successfully.',
+                timer: 1800,
+                showConfirmButton: false
+            }).then(() => {
+                window.location.href = "{{ route('products.index') }}";
+            });
+
+        } catch (error) {
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.message || 'Unexpected error occurred.'
+            });
+
+        }
+    },
+        addRow() {
+            this.recipes.push({
+                id: '',
+                component_id: '',
+                quantity: 0,
+                unit: '',
+                cost: 0
+            });
+        },
+
+        removeRow(index) {
+            this.recipes.splice(index, 1);
+        },
+
+        updateRow(row) {
+    const component = this.components.find(
+        c => c.id == row.component_id
+    );
+
+    if (!component) {
+        row.unit = '';
+        row.cost = 0;
+        return;
+    }
+
+    // FIX HERE
+    row.unit = component.unit?.name || '';
+
+    const baseCost = parseFloat(component.cost) || 0;
+    const qty = parseFloat(row.quantity) || 0;
+
+    row.cost = (baseCost * qty).toFixed(2);
+}
+    },
+
+    mounted() {
+     // load recipes from Laravel
+    this.recipes = @json($oldRecipes);
+
+    // compute unit and cost
+    this.recipes.forEach(row => {
+        this.updateRow(row);
+    });
+
+    // if no recipes exist
+    if (this.recipes.length === 0) {
+        this.addRow();
+    }
+    }
+});
+</script>
 @endsection

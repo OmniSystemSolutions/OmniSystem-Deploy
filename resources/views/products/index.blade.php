@@ -4,6 +4,9 @@
        .modal-dialog {
          max-width: 90%;
        }
+        .dropdown-menu {
+        position: relative;
+    }
 </style>
 <div class="main-content" id="app">
    <div>

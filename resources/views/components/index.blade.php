@@ -5,6 +5,9 @@
        .modal-dialog {
          max-width: 90%;
        }
+        .dropdown-menu {
+        position: relative;
+    }
 </style>
 <div class="main-content" id="app">
    <div>
@@ -1057,50 +1060,52 @@ Vue.component("actions-dropdown", {
     );
   },
   filteredRows() {
-    return this.rows.filter(row => {
-      if (this.filters.name &&
-        !row.name?.toLowerCase().includes(this.filters.name.toLowerCase())
-      ) return false;
+   return this.rows
+      .map(row => {
+         // Ensure unit is always a string
+         return {
+         ...row,
+         unit: row.unit?.name || 'N/A' // <-- add this line
+         };
+      })
+      .filter(row => {
+         if (this.filters.name &&
+            !row.name?.toLowerCase().includes(this.filters.name.toLowerCase())
+         ) return false;
 
-      // Category filter
-      if (
-        this.filters.category &&
-        (!row.category || row.category.id !== this.filters.category)
-      ) {
-        return false;
-      }
+         // Category filter
+         if (this.filters.category &&
+            (!row.category || row.category.id !== this.filters.category)
+         ) return false;
 
-      // Subcategory filter
-      if (
-        this.filters.subcategory &&
-        (!row.subcategory || row.subcategory.id !== this.filters.subcategory)
-      ) {
-        return false;
-      }
+         // Subcategory filter
+         if (this.filters.subcategory &&
+            (!row.subcategory || row.subcategory.id !== this.filters.subcategory)
+         ) return false;
 
-      if (this.filters.cost_from !== null &&
-        Number(row.cost) < this.filters.cost_from
-      ) return false;
+         if (this.filters.cost_from !== null &&
+            Number(row.cost) < this.filters.cost_from
+         ) return false;
 
-      if (this.filters.cost_to !== null &&
-        Number(row.cost) > this.filters.cost_to
-      ) return false;
+         if (this.filters.cost_to !== null &&
+            Number(row.cost) > this.filters.cost_to
+         ) return false;
 
-      if (this.filters.price_from !== null &&
-        Number(row.price) < this.filters.price_from
-      ) return false;
+         if (this.filters.price_from !== null &&
+            Number(row.price) < this.filters.price_from
+         ) return false;
 
-      if (this.filters.price_to !== null &&
-        Number(row.price) > this.filters.price_to
-      ) return false;
+         if (this.filters.price_to !== null &&
+            Number(row.price) > this.filters.price_to
+         ) return false;
 
-      if (this.filters.for_sale !== null &&
-        row.for_sale !== this.filters.for_sale
-      ) return false;
+         if (this.filters.for_sale !== null &&
+            row.for_sale !== this.filters.for_sale
+         ) return false;
 
-      return true;
-    });
-  },
+         return true;
+      });
+   },
    filteredSubcategories() {
       if (!this.filters.category) return [];
 
@@ -1402,6 +1407,7 @@ resetImport(showModal = false) {
    .then(res => {
       // table rows
       this.rows = res.data.data;
+      console.log('rows', this.rows)
 
       // pagination
       this.pagination.current_page = res.data.current_page;
