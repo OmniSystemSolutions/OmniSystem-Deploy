@@ -884,20 +884,21 @@ new Vue({
     if (this.recipes.length === 0) {
         this.addRow();
     }
-    this.$nextTick(() => {
-    $('.component-select').select2({
-        placeholder: "Select Component",
-        allowClear: true,
-        width: '100%'
-    });
+    this.$nextTick(()=>{
+        $('.component-select').select2({
+            placeholder:'Select Component',
+            width:'100%'
+        });
 
-    // Focus the search input when dropdown opens
-    $('.component-select').on('select2:open', function () {
-        setTimeout(() => {
-            document.querySelector('.select2-container--open .select2-search__field').focus();
-        }, 0);
+        // Sync Select2 with Vue
+        $('.component-select').on('change', (e)=>{
+            const value = $(e.target).val();
+            const index = $(e.target).closest('tr').index();
+
+            this.recipes[index].component_id = value;
+            this.updateRow(this.recipes[index]);
+        });
     });
-});
     }
 });
 </script>
