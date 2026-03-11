@@ -1,6 +1,11 @@
 @extends('layouts.app')
 @section('content')
-
+<style>
+    .receipt-divider{
+    border-top:1px dashed #000;
+    margin:-10px 0px 20px 0px;
+}
+</style>
 <div class="main-content">
     <div>
         <div class="breadcrumb">
@@ -51,7 +56,9 @@
                         </div>
                     </div>
                 </form>
-                    <button type="button" class="btn mt-2 btn-primary">Generate X Report</button>
+                    <button type="button" class="btn mt-2 btn-primary" data-bs-toggle="modal" data-bs-target="#GenerateXReport">
+                        Generate X Report
+                    </button>
                     <button type="button" class="btn mt-2 btn-primary" data-bs-toggle="modal" data-bs-target="#GenerateZReport">
     Generate Z Report
 </button>
@@ -140,6 +147,121 @@
           <hr>
 
           <p><strong>TOTAL TRANSACTIONS:</strong> <span id="zTotalTransactions">0</span></p>
+        </div>
+      </div>
+
+      <!-- 📎 Sticky footer always visible -->
+      <div class="modal-footer d-flex justify-content-end" 
+           style="background-color: #f8f9fa; position: sticky; bottom: 0; z-index: 100;">
+        <button class="btn btn-outline-primary btn-sm me-2" onclick="window.print()">Print</button>
+        <button class="btn btn-primary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Generate X Report Modal -->
+<div class="modal fade" id="GenerateXReport" tabindex="-1" aria-labelledby="GenerateXReportLabel" aria-hidden="true">
+    <div class="modal-dialog modal-md">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="GenerateXReportLabel">Generate X Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="row">
+                    <!-- Date Range Picker -->
+                    <div class="col-md-12 mb-3">
+                        <label for="date_range" class="form-label">Select Date Range *</label>
+                        <input type="text" id="xdate_range" name="date_range" class="form-control" required readonly>
+                    </div>
+
+                    <!-- Cashier -->
+                    <div class="col-md-12 mb-3">
+    <label class="form-label">Select Cashier</label>
+
+    <input type="text" class="form-control"
+           value="{{ auth()->user()->name ?? '' }}" readonly>
+
+    <input type="hidden" id="cashier_id" value="{{ auth()->user()->id }}">
+</div>
+
+                    <!-- Submit -->
+                    <div class="col-md-12 mt-3">
+                        <button type="button" class="btn btn-warning w-100 text-white"
+                                style="background-color:#ff6600; border:none;" id="generateXReportBtn">
+                            Submit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- X Report Modal -->
+<div class="modal fade" id="XReportModal" tabindex="-1" aria-labelledby="XReportModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-scrollable"> 
+    <div class="modal-content" style="max-height: 90vh;"> <!-- Limit modal height -->
+      
+      <div class="modal-header">
+        <h5 class="modal-title" id="XReportModalLabel">X READING REPORT</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <!-- 🧾 Scrollable modal body -->
+      <div class="modal-body" style="overflow-y: auto; max-height: calc(90vh - 120px);">
+        <div style="font-family: Arial, Helvetica, sans-serif; font-size: 13px;">
+          <div style="display:flex;">
+            <span>Date:</span> 
+            <span id="xFromDate"></span>
+          </div>
+          <div style="display:flex;">
+            <span>Time:</span> 
+            <span id="xTime"></span>
+          </div>
+          <div style="display:flex;">
+            <span>Cashier:</span> 
+            <span id="xCashier"></span>
+          </div>
+          <br>
+
+          <p><strong>SUMARRY</strong></p>
+          <div class="receipt-divider"></div>
+          <div style="display:flex; justify-content:space-between;">
+            <span>Total Orders</span>
+            <span id="total_orders">0</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span>Gross Sales:</span>
+            <span id="xGrossSales">0.00</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span>Discounts:</span>
+            <span id="xDiscounts">0.00</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span>Net Sales:</span>
+            <span id="xNetSales">0.00</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span>Tax (12%):</span>
+            <span id="xTax">0.00</span>
+          </div>
+          <br>
+
+          <p><strong>PAYMENT METHODS</strong></p>
+          <div class="receipt-divider"></div>
+          <div id="xPaymentMethods"></div>
+
+          <br>
+          <p><strong>ITEM SOLD</strong></p>
+          <div class="receipt-divider"></div>
+          <div id="xItemsSold"></div>
+
+          <hr>
         </div>
       </div>
 
@@ -311,6 +433,182 @@ $(function() {
     });
 });
 </script>
+
+{{-- Start For X-Report  --}}
+<script>
+$(document).ready(function() {
+    $('#xdate_range').daterangepicker({
+        locale: { format: 'YYYY-MM-DD' },
+        opens: 'center'
+    });
+
+    $('#generateXReportBtn').on('click', function () {
+
+    const dateRange = $('#xdate_range').val();
+
+    if (!dateRange) {
+        alert('Please select a date range first.');
+        return;
+    }
+
+    const [from, to] = dateRange.split(' - ');
+
+    $.ajax({
+        url: "{{ route('reports.sales-journal.fetch') }}",
+        type: "GET",
+        data: {
+            from_date: from,
+            to_date: to,
+            cashier_id: {{ auth()->id() }}
+        },
+
+        beforeSend: function () {
+            $('#generateXReportBtn').prop('disabled', true).text('Loading...');
+        },
+
+        success: function(response) {
+
+            console.log('✅ X Report:', response);
+
+            // SUMMARY
+            $('#xFromDate').text(response.date);
+            $('#xTime').text(new Date().toLocaleTimeString());
+            $('#xCashier').text(response.cashier);
+
+            $('#totalOrders').text(
+                    Number(response.total_orders).toLocaleString()
+                );
+            $('#xGrossSales').text(parseFloat(response.gross_sales).toFixed(2));
+            $('#xDiscounts').text(parseFloat(response.discounts).toFixed(2));
+            $('#xNetSales').text(parseFloat(response.net_sales).toFixed(2));
+            $('#xTax').text(parseFloat(response.tax).toFixed(2));
+
+            /* =========================
+            PAYMENT METHODS
+            ========================= */
+
+            let paymentHtml = '';
+
+            if (response.payments.cash > 0) {
+                paymentHtml += `
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>Cash</span>
+                        <span>₱${parseFloat(response.payments.cash).toFixed(2)}</span>
+                    </div>
+                    `;
+            }
+
+            if (response.payments.card > 0) {
+               paymentHtml += `
+                <div style="display:flex; justify-content:space-between;">
+                    <span>Card</span>
+                    <span>₱${parseFloat(response.payments.card).toFixed(2)}</span>
+                </div>
+                `;
+            }
+
+            if (response.payments.e_wallet > 0) {
+                paymentHtml += `
+                <div style="display:flex; justify-content:space-between;">
+                    <span>E-Wallet</span>
+                    <span>₱${parseFloat(response.payments.e_wallet).toFixed(2)}</span>
+                </div>
+                `;
+            }
+
+            $('#xPaymentMethods').html(paymentHtml);
+
+
+            /* =========================
+            ITEMS SOLD
+            ========================= */
+
+            let itemsHtml = '';
+
+            if (response.order_details.length > 0) {
+
+                response.order_details.forEach(function(item) {
+
+                    itemsHtml += `
+                        <div style="display:flex; justify-content:space-between;">
+                            <span>${item.name}</span>
+                            <span>x${item.quantity}</span>
+                        </div>
+                    `;
+
+                });
+
+            }
+
+            $('#xItemsSold').html(itemsHtml);
+
+
+            const xReportModal1 = bootstrap.Modal.getInstance(document.getElementById('GenerateXReport'));
+            if (xReportModal1) xReportModal1.hide();
+
+            const xReportModal2 = new bootstrap.Modal(document.getElementById('XReportModal'));
+            xReportModal2.show();
+        },
+
+        error: function (xhr) {
+            console.error('❌ AJAX Error:', xhr.responseText);
+        },
+
+        complete: function () {
+            $('#generateXReportBtn').prop('disabled', false).text('Submit');
+        }
+    });
+
+});
+});
+</script>
+
+<!-- Initialize Date Range Picker + Filtering -->
+<script>
+$(function() {
+    // Initialize the Date Range Picker
+    $('#xdate_range').daterangepicker({
+        opens: 'right',
+        autoApply: true,
+        locale: {
+            format: 'MM/DD/YYYY'
+        },
+        startDate: moment().startOf('month'),
+        endDate: moment().endOf('month'),
+        ranges: {
+            'Today': [moment(), moment()],
+            'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+            'This Month': [moment().startOf('month'), moment().endOf('month')],
+            'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
+            'This Year': [moment().startOf('year'), moment().endOf('year')]
+        }
+    });
+
+    // Filter data when clicking Submit
+    $('#filterXReportBtn').on('click', function() {
+        const dateRange = $('#xdate_range').val().trim();
+        const cashier = $('#cashier_name').val().trim();
+        if (!dateRange) {
+            alert('Please select a date range.');
+            return;
+        }
+
+        const [start, end] = dateRange.split('-').map(d => new Date(d.trim()));
+        $('#xReportTable tbody tr').each(function() {
+            const rowDate = new Date($(this).data('date'));
+            const rowCashier = $(this).data('cashier');
+            const inRange = rowDate >= start && rowDate <= end;
+            const cashierMatch = cashier === rowCashier;
+            $(this).toggle(inRange && cashierMatch);
+        });
+
+        // Close modal
+        const xReportModal = bootstrap.Modal.getInstance(document.getElementById('GenerateXReport'));
+        xReportModal.hide();
+    });
+});
+</script>
+{{-- End of X-Report --}}
 
                 <div class="col-sm-12 col-md-2"></div>
 

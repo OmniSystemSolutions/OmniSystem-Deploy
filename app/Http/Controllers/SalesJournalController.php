@@ -148,20 +148,21 @@ public function index(Request $request)
 
 public function xReport(Request $request)
 {
-    $date = $request->input('date');
-    $cashierId = $request->input('cashier_id');
+    $from = $request->input('from_date');
+$to = $request->input('to_date');
+$cashierId = auth()->id(); // logged-in cashier
 
-    if (!$date || !$cashierId) {
-        return response()->json(['error' => 'Date and cashier are required.'], 422);
-    }
+if (!$from || !$to) {
+    return response()->json(['error' => 'Date range is required.'], 422);
+}
 
     // Parse date
     try {
-        $from = Carbon::createFromFormat('Y-m-d', $date)->startOfDay();
-        $to = Carbon::createFromFormat('Y-m-d', $date)->endOfDay();
-    } catch (\Exception $e) {
-        return response()->json(['error' => 'Invalid date format. Use YYYY-MM-DD.'], 422);
-    }
+    $from = Carbon::createFromFormat('m/d/Y', $from)->startOfDay();
+    $to = Carbon::createFromFormat('m/d/Y', $to)->endOfDay();
+} catch (\Exception $e) {
+    return response()->json(['error' => 'Invalid date format.'], 422);
+}
 
     // Get orders for that date and cashier
     $orders = Order::with('orderDetails.product', 'orderDetails.component', 'cashier')
@@ -175,7 +176,7 @@ public function xReport(Request $request)
     $grossSales = $orders->sum('total_charge');
     $discounts = $orders->sum('sr_pwd_discount') + $orders->sum('other_discounts');
     $taxExempt = $orders->sum('sr_pwd_discount') - $orders->sum('vat_12');
-    $netSales = $grossSales - $discounts - $taxExempt;
+    $netSales = $grossSales - $discounts;
     $tax = $orders->sum('vat_12');
 
     // Payment breakdown
@@ -209,9 +210,11 @@ public function xReport(Request $request)
 
     // Response
     $report = [
-        'date' => $date,
+        'from' => $from,
+        'to' => $to,
         'cashier' => $orders->first()?->cashier->name ?? null,
         'total_orders' => $totalOrders,
+        'discounts' => $discounts,
         'gross_sales' => $grossSales,
         'net_sales' => $netSales,
         'tax' => $tax,

@@ -641,14 +641,14 @@
                        v-model="row.id">
 
                 <td>
-                    <select class="form-control"
+                    <select class="form-control component-select"
                             :name="'recipes[' + index + '][component_id]'"
                             v-model="row.component_id"
                             @change="updateRow(row)">
 
                         <option value="">Select Component</option>
 
-                        <option v-for="c in components"
+                        <option v-for="c in sortedComponents"
                                 :key="c.id"
                                 :value="c.id"
                                 :data-cost="c.cost"
@@ -759,7 +759,12 @@ new Vue({
             return this.recipes.reduce((sum, row) => {
                 return sum + (parseFloat(row.cost) || 0);
             }, 0).toFixed(2);
-        }
+        },
+        sortedComponents(){
+        return [...this.components].sort((a,b)=>
+            a.name.localeCompare(b.name)
+        );
+    }
     },
 
     methods: {
@@ -879,6 +884,20 @@ new Vue({
     if (this.recipes.length === 0) {
         this.addRow();
     }
+    this.$nextTick(() => {
+    $('.component-select').select2({
+        placeholder: "Select Component",
+        allowClear: true,
+        width: '100%'
+    });
+
+    // Focus the search input when dropdown opens
+    $('.component-select').on('select2:open', function () {
+        setTimeout(() => {
+            document.querySelector('.select2-container--open .select2-search__field').focus();
+        }, 0);
+    });
+});
     }
 });
 </script>
