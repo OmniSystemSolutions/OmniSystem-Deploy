@@ -7,226 +7,303 @@ use App\Models\Order;
 use App\Models\OrderDetail;
 use App\Models\PaymentDetail;
 use Illuminate\Http\Request;
+use App\Models\User;
 
 class SalesJournalController extends Controller
 {
 public function index(Request $request)
 {
-    $year = $request->input('year');
-    $month = $request->input('month') ?? now()->month;
-    $from = $request->input('from_date');
-    $to = $request->input('to_date');
+    $users = User::all();
+    $branchId = current_branch_id();
 
-    $query = Order::where('status', 'payments');
+    $year  = $request->input('year');
+    $month = $request->input('month');
 
-    // 🗓 Apply filters
-    if ($year) {
-        $query->whereYear('created_at', $year);
+    // Default: all dates
+    $from = null;
+    $to   = null;
+
+    if ($year && $month && $month !== 'all') {
+        // Specific month of a year
+        $from = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $to   = Carbon::createFromDate($year, $month, 1)->endOfMonth();
+    } elseif ($year) {
+        // Whole year
+        $from = Carbon::createFromDate($year, 1, 1)->startOfYear();
+        $to   = Carbon::createFromDate($year, 12, 31)->endOfYear();
     }
 
-    if ($month && $month != 'all') {
-        $query->whereMonth('created_at', $month);
-    }
+    $ordersQuery = Order::with('cashier')
+        ->where('branch_id', $branchId)
+        ->where('status', 'payments');
 
     if ($from && $to) {
-        try {
-            // Detect whether date is "YYYY-MM-DD" or "MM/DD/YYYY"
-            if (strpos($from, '/') !== false) {
-                $from = Carbon::createFromFormat('m/d/Y', $from)->startOfDay();
-                $to = Carbon::createFromFormat('m/d/Y', $to)->endOfDay();
-            } else {
-                $from = Carbon::createFromFormat('Y-m-d', $from)->startOfDay();
-                $to = Carbon::createFromFormat('Y-m-d', $to)->endOfDay();
-            }
-
-            $query->whereBetween('created_at', [$from, $to]);
-        } catch (\Exception $e) {
-            \Log::error('Invalid date format: ' . $e->getMessage());
-        }
+        $ordersQuery->whereBetween('updated_at', [$from, $to]);
     }
 
-    $orders = $query->with('cashier')->orderBy('created_at', 'desc')->get();
-
-    // 🧮 Z Reading Computations
-    $discounts = $orders->sum('sr_pwd_discount') + $orders->sum('other_discounts');
-
-    $grossTotal = $orders->sum('total_charge');
-    $lessDiscount = $discounts;
-    $taxExempt = $orders->sum('sr_pwd_discount') - $orders->sum('vat_12');
-    $total = $grossTotal - $lessDiscount - $taxExempt;
-    $netTotal = $grossTotal - $lessDiscount - $taxExempt;
-
-    $vat12 = $orders->sum('vat_12');
-    $vatIncl = $orders->sum('vatable');
-    $vatExcl = $orders->sum('total_charge');
-
-    // 🍽 FOOD TOTAL (filtered by date)
-    $foodQuery = OrderDetail::whereHas('order', function ($query) use ($from, $to) {
-        $query->where('status', 'payments');
-        if ($from && $to) {
-            $query->whereBetween('created_at', [$from, $to]);
-        }
-    })
-    ->where(function ($query) {
-        $query->whereHas('product.category', function ($q) {
-            $q->where('name', 'Food');
-        })->orWhereHas('component.category', function ($q) {
-            $q->where('name', 'Food');
-        });
-    });
-
-    $foodTotal = $foodQuery->sum(\DB::raw('price * quantity'));
-
-    // 🍹 DRINKS TOTAL (filtered by date)
-    $drinksQuery = OrderDetail::whereHas('order', function ($query) use ($from, $to) {
-        $query->where('status', 'payments');
-        if ($from && $to) {
-            $query->whereBetween('created_at', [$from, $to]);
-        }
-    })
-    ->where(function ($query) {
-        $query->whereHas('product.category', function ($q) {
-            $q->where('name', 'Drinks');
-        })->orWhereHas('component.category', function ($q) {
-            $q->where('name', 'Drinks');
-        });
-    });
-
-    $drinksTotal = $drinksQuery->sum(\DB::raw('price * quantity'));
-
-    $FoodAndDrinksDiscountTotal = $orders->sum('sr_pwd_discount') + $orders->sum('other_discounts');
-
-    // 💵 COLLECTION PER PAYMENT TYPE (filtered by date)
-    $paymentTypes = ['Cash', 'GCash', 'Debit Card', 'Credit Card', 'Check'];
-    $collections = [];
-    $totalCollection = 0;
-
-    foreach ($paymentTypes as $type) {
-        $collectionQuery = PaymentDetail::whereHas('order', function ($q) use ($from, $to) {
-            $q->where('status', 'payments');
-            if ($from && $to) {
-                $q->whereBetween('created_at', [$from, $to]);
-            }
-        })
-        ->whereHas('payment', fn($q) => $q->where('name', $type))
+    $orders = $ordersQuery
+        ->orderBy('updated_at', 'desc')
         ->get();
 
-        $collections[strtolower(str_replace(' ', '_', $type))] = $collectionQuery->sum(function ($detail) use ($type) {
-            if ($type === 'Cash') {
-                return $detail->amount_paid - $detail->order->change_amount;
-            }
-            return $detail->amount_paid;
-        });
+    $totalTransactions = (clone $ordersQuery)->count();
 
-        $totalCollection += $collections[strtolower(str_replace(' ', '_', $type))];
-    }
+    $grossTotal = (clone $ordersQuery)->sum('total_charge');
+    
+    // SALES BREAKDOWN BY ORDER TYPE
+    $salesBreakdown = Order::where('branch_id', $branchId)
+    ->where('status', 'payments')
+    ->when($from && $to, function ($q) use ($from, $to) {
+        $q->whereBetween('updated_at', [$from, $to]);
+    })
+    ->selectRaw('order_type, SUM(total_charge) as total')
+    ->groupBy('order_type')
+    ->pluck('total', 'order_type');
 
-    // 📊 Summary
-    $summary = [
-        'total_transactions' => $orders->count(),
-        'gross_total' => $grossTotal,
-        'less_discount' => $lessDiscount,
-        'tax_exempt' => $taxExempt,
-        'net_total' => $netTotal,
-        'vat_12' => $vat12,
-        'vat_inclusive' => $vatIncl,
-        'vat_exclusive' => $vatExcl,
-        'food_total' => $foodTotal,
-        'drinks_total' => $drinksTotal,
-        'food_and_drinks_discount_total' => $FoodAndDrinksDiscountTotal,
-        'collections' => $collections,
-        'total_collection' => $totalCollection,
+    // Ensure missing types return 0
+    $chartData = [
+        'Dine-In' => $salesBreakdown['Dine-In'] ?? 0,
+        'Take-Out' => $salesBreakdown['Take-Out'] ?? 0,
+        'Delivery' => $salesBreakdown['Delivery'] ?? 0,
     ];
 
-    // ✅ AJAX Response
-    if ($request->ajax()) {
-        return response()->json($summary);
-    }
+    $summary = [
+        'total_transactions' => $totalTransactions,
+        'gross_total' => $grossTotal,
+        'salesBreakdown' => $chartData,
+    ];
 
-    return view('reports.sales-journal', compact('orders', 'summary', 'year', 'month'));
+    return view('reports.sales-journal', compact(
+        'orders',
+        'users',
+        'summary',
+        'year',
+        'month',
+        'chartData'
+    ));
 }
 
 public function xReport(Request $request)
 {
-    $from = $request->input('from_date');
-$to = $request->input('to_date');
-$cashierId = auth()->id(); // logged-in cashier
+    $date = $request->input('date');
+    $cashierId = $request->input('cashier_id');
+    $branchId = current_branch_id();
 
-if (!$from || !$to) {
-    return response()->json(['error' => 'Date range is required.'], 422);
-}
+    if (!$date || !$cashierId) {
+        return response()->json([
+            'error' => 'Date and cashier are required.'
+        ], 422);
+    }
 
-    // Parse date
     try {
-    $from = Carbon::createFromFormat('m/d/Y', $from)->startOfDay();
-    $to = Carbon::createFromFormat('m/d/Y', $to)->endOfDay();
-} catch (\Exception $e) {
-    return response()->json(['error' => 'Invalid date format.'], 422);
-}
+        $from = Carbon::createFromFormat('Y-m-d', $date)->startOfDay();
+        $to   = Carbon::createFromFormat('Y-m-d', $date)->endOfDay();
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => 'Invalid date format.'
+        ], 422);
+    }
 
-    // Get orders for that date and cashier
-    $orders = Order::with('orderDetails.product', 'orderDetails.component', 'cashier')
+    $orders = Order::with([
+            'orderDetails.product',
+            'orderDetails.component',
+            'paymentDetails.payment',
+            'cashier'
+        ])
+        ->where('branch_id', $branchId) // ✅ CURRENT BRANCH
         ->where('status', 'payments')
         ->where('cashier_id', $cashierId)
-        ->whereBetween('created_at', [$from, $to])
-        ->orderBy('created_at', 'asc')
+        ->whereBetween('updated_at', [$from, $to])
+        ->orderBy('updated_at', 'asc')
         ->get();
 
+    /* ---------------------------
+       SALES SUMMARY
+    --------------------------- */
+
     $totalOrders = $orders->count();
-    $grossSales = $orders->sum('total_charge');
-    $discounts = $orders->sum('sr_pwd_discount') + $orders->sum('other_discounts');
-    $taxExempt = $orders->sum('sr_pwd_discount') - $orders->sum('vat_12');
-    $netSales = $grossSales - $discounts;
+
+    $grossSales = $orders->sum('gross_amount');
+
+    $discounts = $orders->sum('discount_total');
+
     $tax = $orders->sum('vat_12');
 
-    // Payment breakdown
-    $cash = $orders->sum(function($order) { return $order->paymentDetails->where('payment.name', 'Cash')->sum('amount_paid') - $order->change_amount; });
-    $card = $orders->sum(function($order) { return $order->paymentDetails->whereIn('payment.name', ['Debit Card','Credit Card'])->sum('amount_paid'); });
-    $eWallet = $orders->sum(function($order) { return $order->paymentDetails->where('payment.name', 'GCash')->sum('amount_paid'); });
+    $netSales = $orders->sum('net_amount');
 
-    // Order details breakdown (grouped by product/component)
+
+    /* ---------------------------
+       PAYMENT BREAKDOWN
+    --------------------------- */
+
+    $cash = $orders->sum(function ($order) {
+        return $order->paymentDetails
+            ->where('payment.name', 'Cash')
+            ->sum('amount_paid') - $order->change_amount;
+    });
+
+    $card = $orders->sum(function ($order) {
+        return $order->paymentDetails
+            ->whereIn('payment.name', ['Debit Card','Credit Card'])
+            ->sum('amount_paid');
+    });
+
+    $eWallet = $orders->sum(function ($order) {
+        return $order->paymentDetails
+            ->where('payment.name', 'GCash')
+            ->sum('amount_paid');
+    });
+
+
+    /* ---------------------------
+       ITEMS SOLD
+    --------------------------- */
+
     $orderDetails = collect();
+
     foreach ($orders as $order) {
+
         foreach ($order->orderDetails as $detail) {
+
             $key = $detail->product_id ?? $detail->component_id;
-            $name = $detail->product->name ?? $detail->component->name;
+
+            $name = $detail->product->name
+                ?? $detail->component->name;
+
             $orderDetails->push([
                 'key' => $key,
                 'name' => $name,
                 'quantity' => $detail->quantity,
-                'total' => $detail->price * $detail->quantity,
+                'total' => $detail->price * $detail->quantity
             ]);
         }
     }
 
-    // Group by product/component
-    $orderDetailsGrouped = $orderDetails->groupBy('key')->map(function($items) {
-        return [
-            'name' => $items->first()['name'],
-            'quantity' => $items->sum('quantity'),
-            'total' => $items->sum('total'),
-        ];
-    })->values();
+    $orderDetailsGrouped = $orderDetails
+        ->groupBy('key')
+        ->map(function ($items) {
 
-    // Response
+            return [
+                'name' => $items->first()['name'],
+                'quantity' => $items->sum('quantity'),
+                'total' => $items->sum('total')
+            ];
+        })
+        ->values();
+
+
+    /* ---------------------------
+       RESPONSE
+    --------------------------- */
+
     $report = [
-        'from' => $from,
-        'to' => $to,
+
+        'date' => $from->format('Y-m-d'),
+
         'cashier' => $orders->first()?->cashier->name ?? null,
+
         'total_orders' => $totalOrders,
-        'discounts' => $discounts,
+
         'gross_sales' => $grossSales,
+
+        'discounts' => $discounts,
+
         'net_sales' => $netSales,
+
         'tax' => $tax,
+
         'payments' => [
             'cash' => $cash,
             'card' => $card,
             'e_wallet' => $eWallet,
         ],
-        'order_details' => $orderDetailsGrouped,
+
+        'order_details' => $orderDetailsGrouped
     ];
 
     return response()->json($report);
 }
 
+   public function zReport(Request $request)
+{
+    $branchId = current_branch_id();
+
+    $date = $request->input('date')
+        ? Carbon::createFromFormat('Y-m-d', $request->date)
+        : Carbon::today();
+
+    $startOfDay = $date->copy()->startOfDay();
+    $endOfDay   = $date->copy()->endOfDay();
+
+    $orders = Order::with(['orderDetails.product','orderDetails.component','paymentDetails.payment'])
+        ->where('branch_id', $branchId) // ✅ current branch
+        ->where('status','payments')
+        ->whereBetween('updated_at', [$startOfDay, $endOfDay])
+        ->get();
+
+
+    /* ---------------------------
+       SALES SUMMARY
+    --------------------------- */
+
+    $totalOrders = $orders->count();
+
+    $grossSales = $orders->sum('gross_amount');
+
+    $discounts = $orders->sum('discount_total');
+
+    $netSales = $orders->sum('net_amount');
+
+    $tax = $orders->sum('vat_12');
+
+
+    /* ---------------------------
+       PAYMENT METHODS
+    --------------------------- */
+
+    $payments = PaymentDetail::whereHas('order', function ($q) use ($startOfDay,$endOfDay,$branchId) {
+        $q->where('branch_id', $branchId) // ✅ branch filter
+          ->where('status','payments')
+          ->whereBetween('updated_at', [$startOfDay,$endOfDay]);
+    })
+    ->with('payment')
+    ->get()
+    ->groupBy('payment.name')
+    ->map(function ($items) {
+        return $items->sum('amount_paid');
+    });
+
+
+    /* ---------------------------
+       ITEMS SOLD
+    --------------------------- */
+
+    $items = OrderDetail::whereHas('order', function ($q) use ($startOfDay,$endOfDay,$branchId) {
+        $q->where('branch_id', $branchId) // ✅ branch filter
+          ->where('status','payments')
+          ->whereBetween('updated_at', [$startOfDay,$endOfDay]);
+    })
+    ->with(['product','component'])
+    ->get()
+    ->groupBy(function ($item) {
+        return $item->product->name ?? $item->component->name;
+    })
+    ->map(function ($items) {
+        return $items->sum('quantity');
+    });
+
+
+    return response()->json([
+        'date' => $date->format('M d, Y'),
+        'time' => now()->format('h:i A'),
+
+        'total_orders' => $totalOrders,
+        'gross_sales' => $grossSales,
+        'discounts' => $discounts,
+        'net_sales' => $netSales,
+        'tax' => $tax,
+
+        'payments' => $payments,
+        'items' => $items
+    ]);
+}
 }

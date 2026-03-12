@@ -77,17 +77,10 @@
 
             <div class="modal-body">
                 <div class="row">
-                    <!-- Date Range Picker -->
+                    <!-- Date Picker -->
                     <div class="col-md-12 mb-3">
-                        <label for="date_range" class="form-label">Select Date Range *</label>
-                        <input type="text" id="date_range" name="date_range" class="form-control" required readonly>
-                    </div>
-
-                    <!-- Cashier -->
-                    <div class="col-md-12 mb-3">
-                        <label for="cashier_name" class="form-label">Select Cashier</label>
-                        <input type="text" class="form-control" id="cashier_name" 
-                               value="{{ auth()->user()->name ?? '' }}" readonly>
+                        <label for="zdate" class="form-label">Select Date *</label>
+                        <input type="date" id="zdate" name="zdate" class="form-control" required>
                     </div>
 
                     <!-- Submit -->
@@ -110,43 +103,45 @@
       
       <div class="modal-header">
         <h5 class="modal-title" id="ZReportModalLabel">Z READING REPORT</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
 
       <!-- 🧾 Scrollable modal body -->
       <div class="modal-body" style="overflow-y: auto; max-height: calc(90vh - 120px);">
         <div style="font-family: Arial, Helvetica, sans-serif; font-size: 13px;">
-          <p><strong>DATE (From):</strong> <span id="zFromDate"></span></p>
-          <p><strong>DATE (To):</strong> <span id="zToDate"></span></p>
-          <hr>
+          <p><strong>Date:</strong> <span id="zReportDate"></span></p>
+          <p><strong>Time:</strong> <span id="ztime"></span></p>
 
-          <p><strong>Gross Sales:</strong> ₱<span id="zGrossSales">0.00</span></p>
-          <p><strong>Less Discount:</strong> ₱<span id="zLessDiscount">0.00</span></p>
-          <p><strong>Less Tax Exempt:</strong> ₱<span id="zTaxExempt">0.00</span></p>
-          <p><strong>Total:</strong> ₱<span id="zTotal">0.00</span></p>
-          <hr>
+          <p><strong>SALES SUMMARY</strong></p>
+          <div class="receipt-divider"></div>
+          <div style="display:flex; justify-content:space-between;">
+            <span>Total Orders</span>
+            <span id="zTotalOrders">0.00</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span>Gross Sales:</span>
+            <span id="zGrossSales">0.00</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span>Discounts:</span>
+            <span id="zDiscounts">0.00</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span>Net Sales:</span>
+            <span id="zNetSales">0.00</span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span>Tax:</span>
+            <span id="zTax">0.00</span>
+          </div>
+          
+          <p><strong>PAYMENT METHODS</strong></p>
+          <div class="receipt-divider"></div>
+          <div id="zPaymentMethods"></div>
 
-          <p><strong>12% VAT:</strong> ₱<span id="zVat12">0.00</span></p>
-          <p><strong>VAT Incl Sales:</strong> ₱<span id="zVatIncl">0.00</span></p>
-          <p><strong>VAT Excl Sales:</strong> ₱<span id="zVatExcl">0.00</span></p>
-          <hr>
+          <p><strong>ITEM SOLD</strong></p>
+          <div class="receipt-divider"></div>
+          <div id="zItemsSold"></div>
 
-          <p><strong>REVENUE</strong></p>
-          <p>Food: ₱<span id="zFood">0.00</span></p>
-          <p>Drinks: ₱<span id="zDrinks">0.00</span></p>
-          <p>Discount: ₱<span id="zDiscount">0.00</span></p>
-          <p>Tax Exempt: ₱<span id="zTaxExempt2">0.00</span></p>
-          <hr>
-
-          <p><strong>COLLECTION</strong></p>
-          <p>Cash: ₱<span id="zCash">0.00</span></p>
-          <p>GCash: ₱<span id="zGcash">0.00</span></p>
-          <p>Debit Card: ₱<span id="zDebitCard">0.00</span></p>
-          <p>Credit Card: ₱<span id="zCreditCard">0.00</span></p>
-          <p>Check: ₱<span id="zCheck">0.00</span></p>
-          <hr>
-
-          <p><strong>TOTAL TRANSACTIONS:</strong> <span id="zTotalTransactions">0</span></p>
         </div>
       </div>
 
@@ -172,21 +167,33 @@
 
             <div class="modal-body">
                 <div class="row">
-                    <!-- Date Range Picker -->
-                    <div class="col-md-12 mb-3">
-                        <label for="date_range" class="form-label">Select Date Range *</label>
-                        <input type="text" id="xdate_range" name="date_range" class="form-control" required readonly>
-                    </div>
 
-                    <!-- Cashier -->
-                    <div class="col-md-12 mb-3">
-    <label class="form-label">Select Cashier</label>
+    <!-- Date Picker -->
+    <div class="col-md-12 mb-3">
+        <label class="form-label">Select Date *</label>
+        <input type="date"
+               id="xdate"
+               name="date"
+               class="form-control"
+               value="{{ date('Y-m-d') }}"
+               required>
+    </div>
 
-    <input type="text" class="form-control"
-           value="{{ auth()->user()->name ?? '' }}" readonly>
+    <!-- Cashier Dropdown -->
+    <div class="col-md-12 mb-3">
+        <label class="form-label">Select Cashier *</label>
 
-    <input type="hidden" id="cashier_id" value="{{ auth()->user()->id }}">
-</div>
+        <select id="cashier_id" class="form-control">
+            <option value="">-- Select Cashier --</option>
+
+            @foreach($users as $user)
+                <option value="{{ $user->id }}">
+                    {{ $user->name }}
+                </option>
+            @endforeach
+
+        </select>
+    </div>
 
                     <!-- Submit -->
                     <div class="col-md-12 mt-3">
@@ -216,7 +223,7 @@
         <div style="font-family: Arial, Helvetica, sans-serif; font-size: 13px;">
           <div style="display:flex;">
             <span>Date:</span> 
-            <span id="xFromDate"></span>
+            <span id="xDate"></span>
           </div>
           <div style="display:flex;">
             <span>Time:</span> 
@@ -226,13 +233,12 @@
             <span>Cashier:</span> 
             <span id="xCashier"></span>
           </div>
-          <br>
 
           <p><strong>SUMARRY</strong></p>
           <div class="receipt-divider"></div>
           <div style="display:flex; justify-content:space-between;">
             <span>Total Orders</span>
-            <span id="total_orders">0</span>
+            <span id="totalOrders">0</span>
           </div>
           <div style="display:flex; justify-content:space-between;">
             <span>Gross Sales:</span>
@@ -250,13 +256,11 @@
             <span>Tax (12%):</span>
             <span id="xTax">0.00</span>
           </div>
-          <br>
 
           <p><strong>PAYMENT METHODS</strong></p>
           <div class="receipt-divider"></div>
           <div id="xPaymentMethods"></div>
 
-          <br>
           <p><strong>ITEM SOLD</strong></p>
           <div class="receipt-divider"></div>
           <div id="xItemsSold"></div>
@@ -278,113 +282,81 @@
 
 <script>
 $(document).ready(function() {
-    $('#date_range').daterangepicker({
-        locale: { format: 'YYYY-MM-DD' },
-        opens: 'center'
-    });
+
+    // Default date = today
+    const today = new Date().toISOString().split('T')[0];
+    $('#zdate').val(today);
 
     $('#generateZReportBtn').on('click', function() {
-        const dateRange = $('#date_range').val();
-        if (!dateRange) {
-            alert('Please select a date range first.');
+        const zdate = $('#zdate').val();
+
+        if (!zdate) {
+            alert('Please select a date.');
             return;
         }
 
-        const [from, to] = dateRange.split(' - ');
-
         $.ajax({
-            url: "{{ route('reports.sales-journal') }}",
+            url: "{{ route('reports.sales-journal.fetch-zreport') }}",
             type: "GET",
-            data: { from_date: from, to_date: to },
+            data: { date: zdate }, // only date
+
             beforeSend: function() {
                 $('#generateZReportBtn').prop('disabled', true).text('Loading...');
             },
-            success: function(response) {
-                console.log('✅ Response:', response);
-                $('#zFromDate').text(from);
-                $('#zToDate').text(to);
-                $('#zGrossSales').text(
-                    parseFloat(response.gross_total || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
-                $('#zLessDiscount').text(
-                    parseFloat(response.less_discount || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
-                $('#zTaxExempt').text(
-                    parseFloat(response.tax_exempt || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
-                $('#zTotal').text(
-                    parseFloat(response.net_total || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
-                $('#zVat12').text(
-                    parseFloat(response.vat_12 || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
-                $('#zVatIncl').text(
-                    parseFloat(response.vat_inclusive || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
-                $('#zVatExcl').text(
-                    parseFloat(response.vat_exclusive || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
-                $('#zFood').text(
-                    parseFloat(response.food_total || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
-                $('#zDrinks').text(
-                    parseFloat(response.drinks_total || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
-                $('#zDiscount').text(
-                    parseFloat(response.food_and_drinks_discount_total || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
 
-                // 💸 Collections
-                $('#zCash').text(
-                    parseFloat(response.collections.cash || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
+            success: function(response){
 
-                $('#zGcash').text(
-                    parseFloat(response.collections.gcash || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
+                function money(val){
+                    return parseFloat(val || 0).toLocaleString('en-PH',{
+                        minimumFractionDigits:2
+                    });
+                }
 
-                $('#zDebitCard').text(
-                    parseFloat(response.collections.debit_card || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
+                $('#zReportDate').text(response.date);
+                $('#ztime').text(response.time);
 
-                $('#zCreditCard').text(
-                    parseFloat(response.collections.credit_card || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
+                $('#zTotalOrders').text(response.total_orders);
+                $('#zGrossSales').text(money(response.gross_sales));
+                $('#zDiscounts').text(money(response.discounts));
+                $('#zNetSales').text(money(response.net_sales));
+                $('#zTax').text(money(response.tax));
 
-                $('#zCheck').text(
-                    parseFloat(response.collections.check || 0)
-                        .toLocaleString('en-PH', { minimumFractionDigits: 2 })
-                );
+                // PAYMENT METHODS
+                let paymentHTML = '';
+                $.each(response.payments, function(name, amount){
+                    paymentHTML += `
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>${name}</span>
+                        <span>${money(amount)}</span>
+                    </div>`;
+                });
+                $('#zPaymentMethods').html(paymentHTML);
 
-                const modal1 = bootstrap.Modal.getInstance(document.getElementById('GenerateZReport'));
-                if (modal1) modal1.hide();
+                // ITEMS SOLD
+                let itemsHTML = '';
+                $.each(response.items, function(name, qty){
+                    itemsHTML += `
+                    <div style="display:flex; justify-content:space-between;">
+                        <span>${name}</span>
+                        <span>x${qty}</span>
+                    </div>`;
+                });
+                $('#zItemsSold').html(itemsHTML);
 
-                const modal2 = new bootstrap.Modal(document.getElementById('ZReportModal'));
-                modal2.show();
+                new bootstrap.Modal(document.getElementById('ZReportModal')).show();
             },
+
             error: function(xhr) {
-                console.error('❌ AJAX Error:', xhr.responseText);
-                alert('Server error! Check console for details.');
+                console.error(xhr.responseText);
+                alert('Server error.');
             },
+
             complete: function() {
                 $('#generateZReportBtn').prop('disabled', false).text('Generate Z Report');
             }
         });
     });
+
 });
 </script>
 
@@ -437,29 +409,23 @@ $(function() {
 {{-- Start For X-Report  --}}
 <script>
 $(document).ready(function() {
-    $('#xdate_range').daterangepicker({
-        locale: { format: 'YYYY-MM-DD' },
-        opens: 'center'
-    });
 
     $('#generateXReportBtn').on('click', function () {
 
-    const dateRange = $('#xdate_range').val();
+    const date = $('#xdate').val();
+    const cashierId = $('#cashier_id').val();
 
-    if (!dateRange) {
-        alert('Please select a date range first.');
+    if (!date || !cashierId) {
+        alert('Please select date and cashier.');
         return;
     }
 
-    const [from, to] = dateRange.split(' - ');
-
     $.ajax({
-        url: "{{ route('reports.sales-journal.fetch') }}",
+        url: "{{ route('reports.sales-journal.fetch-xreport') }}",
         type: "GET",
         data: {
-            from_date: from,
-            to_date: to,
-            cashier_id: {{ auth()->id() }}
+            date: date,
+            cashier_id: cashierId
         },
 
         beforeSend: function () {
@@ -471,9 +437,9 @@ $(document).ready(function() {
             console.log('✅ X Report:', response);
 
             // SUMMARY
-            $('#xFromDate').text(response.date);
+            $('#xDate').text(response.date);
             $('#xTime').text(new Date().toLocaleTimeString());
-            $('#xCashier').text(response.cashier);
+            $('#xCashier').text($('#cashier_id option:selected').text());
 
             $('#totalOrders').text(
                     Number(response.total_orders).toLocaleString()
@@ -632,7 +598,7 @@ $(function() {
                         <div class="col-sm-12 col-md-6">
                             <div class="card card-icon">
                                 <div class="card-body p-3">
-                                    <p class="mb-2">{{ now()->year }} Sales Breakdown</p>
+                                    <p class="mb-2">{{ request('year') ?? now()->year }} Sales Breakdown</p>
                                     <div class="chart" style="height: 260px;">
                                         {{-- You can insert your Chart.js or ECharts canvas here --}}
                                         <canvas id="salesBreakdownChart"></canvas>
@@ -648,17 +614,24 @@ $(function() {
         @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+const salesData = @json($chartData);
 document.addEventListener('DOMContentLoaded', function () {
+
     const ctx = document.getElementById('salesBreakdownChart').getContext('2d');
+
     const salesBreakdownChart = new Chart(ctx, {
         type: 'pie',
         data: {
-            labels: ['Walk-in', 'Take-out', 'Delivery'],
+            labels: ['Dine-In', 'Take-Out', 'Delivery'],
             datasets: [{
-                data: [2800, 550, 110], // static sample values
+                data: [
+                    salesData['Dine-In'],
+                    salesData['Take-Out'],
+                    salesData['Delivery']
+                ],
                 backgroundColor: ['#f44336', '#4caf50', '#2196f3'],
                 borderColor: '#fff',
-                borderWidth: 2,
+                borderWidth: 2
             }]
         },
         options: {
@@ -683,6 +656,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
     });
+
 });
 </script>
 @endpush
@@ -735,34 +709,34 @@ document.addEventListener('DOMContentLoaded', function () {
                             </thead>
                             <tbody>
                                 @foreach($orders as $order)
-                @if($order->status == 'payments')
-                    <tr>
-                        <td>{{ $order->created_at }}</td>
-                        <td>{{ $order->id }}</td>
-                        <td>{{ $order->cashier->name }}</td>
-                        <td>{{ $order->id }}</td>
-                        <td>₱{{ number_format($order->total_charge, 2) }}</td>
-                        <td>₱{{ number_format($order->total_payment_rendered, 2) }}</td>
-                        {{-- <td>
-                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                    data-bs-target="#invoiceModal{{ $order->id }}">
-                                View Sales Invoice
-                            </button>
-                        </td> --}}
+                                @if($order->status == 'payments')
+                                    <tr>
+                                        <td>{{ $order->created_at->format('M d, Y h:i A') }}</td>
+                                        <td>{{ $order->id }}</td>
+                                        <td>{{ $order->cashier->name }}</td>
+                                        <td>{{ $order->id }}</td>
+                                        <td>₱{{ number_format($order->total_charge, 2) }}</td>
+                                        <td>₱{{ number_format($order->total_payment_rendered, 2) }}</td>
+                                        {{-- <td>
+                                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                                    data-bs-target="#invoiceModal{{ $order->id }}">
+                                                View Sales Invoice
+                                            </button>
+                                        </td> --}}
 
-                        <td class="text-right">
-                        @include('layouts.actions-dropdown', [
-                            'id' => $order->id,
-                            // This is the dropdown option that triggers the modal
-                            'viewRoute' => '#',
-                            'viewLabel' => 'View Sales Invoice',
-                            'viewModalId' => "invoiceModal{$order->id}",
-                            'remarksRoute' => '#',
-                        ])
-                        </td>
-                    </tr>
-                @endif
-            @endforeach
+                                        <td class="text-right">
+                                        @include('layouts.actions-dropdown', [
+                                            'id' => $order->id,
+                                            // This is the dropdown option that triggers the modal
+                                            'viewRoute' => '#',
+                                            'viewLabel' => 'View Sales Invoice',
+                                            'viewModalId' => "invoiceModal{$order->id}",
+                                            'remarksRoute' => '#',
+                                        ])
+                                        </td>
+                                    </tr>
+                                @endif
+                            @endforeach
                             </tbody>
                         </table>
                     </div>
