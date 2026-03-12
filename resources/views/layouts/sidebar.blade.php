@@ -198,6 +198,12 @@
                         <span class="item-name">Sales Journal</span>
                      </a>
                   </li>
+                  <li class="nav-item">
+                     <a href="{{ route('general-ledger.index') }}" class="">
+                        <i class="fa-solid fa-stairs"></i>
+                        <span class="item-name">General Ledger</span>
+                     </a>
+                  </li>
                </ul>
             </li>
             <li class="nav-item"><a href="/app/reports/y-reading" class=""><i class="nav-icon i-Building"></i> <span class="item-name">Inventory</span></a> </li>

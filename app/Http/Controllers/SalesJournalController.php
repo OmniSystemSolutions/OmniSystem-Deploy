@@ -47,7 +47,9 @@ public function index(Request $request)
 
     $totalTransactions = (clone $ordersQuery)->count();
 
-    $grossTotal = (clone $ordersQuery)->sum('total_charge');
+    $discounts = $orders->sum('sr_pwd_discount')  + $orders->sum('other_discounts');
+
+    $grossTotal = (clone $ordersQuery)->sum('total_charge') + $discounts;
     
     // SALES BREAKDOWN BY ORDER TYPE
     $salesBreakdown = Order::where('branch_id', $branchId)
@@ -122,13 +124,13 @@ public function xReport(Request $request)
 
     $totalOrders = $orders->count();
 
-    $grossSales = $orders->sum('gross_amount');
+    $discounts = $orders->sum('sr_pwd_discount')  + $orders->sum('other_discounts');
 
-    $discounts = $orders->sum('discount_total');
+    $grossSales = $orders->sum('total_charge') + $discounts;
 
     $tax = $orders->sum('vat_12');
 
-    $netSales = $orders->sum('net_amount');
+    $netSales = $orders->sum('total_charge');
 
 
     /* ---------------------------
@@ -247,11 +249,11 @@ public function xReport(Request $request)
 
     $totalOrders = $orders->count();
 
-    $grossSales = $orders->sum('gross_amount');
+    $discounts = $orders->sum('sr_pwd_discount')  + $orders->sum('other_discounts');
 
-    $discounts = $orders->sum('discount_total');
+    $grossSales = $orders->sum('total_charge') + $discounts;
 
-    $netSales = $orders->sum('net_amount');
+    $netSales = $orders->sum('total_charge');
 
     $tax = $orders->sum('vat_12');
 

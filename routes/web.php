@@ -51,6 +51,7 @@ use App\Http\Controllers\TableLayoutController;
 use App\Http\Controllers\StationController;
 use App\Http\Controllers\BundledItemController;
 use App\Http\Controllers\ChartofAccountController;
+use App\Http\Controllers\GeneralLedgerController;
 use App\Http\Controllers\KitchenmrpController;
 use App\Http\Controllers\OrderAndReservationController;
 
@@ -735,5 +736,24 @@ Route::prefix('/inventory/kitchen-mrp')->name('kitchen-mrp.')->group(function ()
     Route::put('/{id}/restore', [KitchenmrpController::class, 'restore'])->name('restore');
 
     Route::delete('/{id}', [KitchenmrpController::class, 'destroy']);
+
+});
+
+Route::prefix('/reports/general-ledger')->name('general-ledger.')->group(function () {
+    Route::get('/', [GeneralLedgerController::class, 'index'])->name('index');
+    // Route::get('/fetch', [KitchenmrpController::class, 'fetchRequests'])->name('fetch');
+
+    // Route::get('/create', [KitchenmrpController::class, 'create'])->name('create');
+    // Route::post('/', [KitchenmrpController::class, 'store'])->name('store');
+    // Route::get('/{id}/edit', [KitchenmrpController::class, 'edit'])->name('edit');
+    // Route::get('/{id}/logGoods', [KitchenmrpController::class, 'isLogProcess'])->name('logGoods');
+    // Route::put('/{id}', [KitchenmrpController::class, 'update']);
+
+    // Route::put('/{id}/update-status', [KitchenmrpController::class, 'updateStatus']);
+
+    // Route::put('/{id}/archive', [KitchenmrpController::class, 'archive'])->name('archive');
+    // Route::put('/{id}/restore', [KitchenmrpController::class, 'restore'])->name('restore');
+
+    // Route::delete('/{id}', [KitchenmrpController::class, 'destroy']);
 
 });

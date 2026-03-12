@@ -704,6 +704,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                     <th>Invoice No.</th>
                                     <th>Total Charge</th>
                                     <th>Amount Paid</th>
+                                    <th>Change</th>
                                     <th class="text-right">Action</th>
                                 </tr>
                             </thead>
@@ -717,6 +718,7 @@ document.addEventListener('DOMContentLoaded', function () {
                                         <td>{{ $order->id }}</td>
                                         <td>₱{{ number_format($order->total_charge, 2) }}</td>
                                         <td>₱{{ number_format($order->total_payment_rendered, 2) }}</td>
+                                        <td>₱{{ number_format($order->change_amount, 2) }}</td>
                                         {{-- <td>
                                             <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
                                                     data-bs-target="#invoiceModal{{ $order->id }}">
