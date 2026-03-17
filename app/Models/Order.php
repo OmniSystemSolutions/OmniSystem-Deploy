@@ -35,6 +35,7 @@ class Order extends Model
         'time_submitted',
         'cashier_id',
         'reservation_id',
+        'paid_datetim'
     ];
 
     public function user()

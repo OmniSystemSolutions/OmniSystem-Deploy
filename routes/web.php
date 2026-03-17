@@ -741,7 +741,7 @@ Route::prefix('/inventory/kitchen-mrp')->name('kitchen-mrp.')->group(function ()
 
 Route::prefix('/reports/general-ledger')->name('general-ledger.')->group(function () {
     Route::get('/', [GeneralLedgerController::class, 'index'])->name('index');
-    // Route::get('/fetch', [KitchenmrpController::class, 'fetchRequests'])->name('fetch');
+    Route::get('/fetch', [GeneralLedgerController::class, 'fetchRequests'])->name('fetch');
 
     // Route::get('/create', [KitchenmrpController::class, 'create'])->name('create');
     // Route::post('/', [KitchenmrpController::class, 'store'])->name('store');

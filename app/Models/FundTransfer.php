@@ -20,6 +20,10 @@ class FundTransfer extends Model
         'status',
         'attachments',
         'branch_id',
+        'approved_by',
+        'approved_datetime',
+        'archived_by',
+        'archived_dateime'
     ];
     
     protected $casts = [
@@ -51,5 +55,16 @@ class FundTransfer extends Model
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+     // Add relationships to users
+    public function approvedByUser()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function archivedByUser()
+    {
+        return $this->belongsTo(User::class, 'archived_by');
     }
 }

@@ -36,8 +36,7 @@ class FundTransferController extends Controller
         $users = User::where('status', 'active')->get();
 
         $branches = Branch::all();
-        $currentBranch = auth()->check() ? auth()->user()->branches()->first() : null;
-        $currentBranchId = $currentBranch->id ?? ($branches->first()->id ?? null);
+        $currentBranchId = current_branch_id();
 
         return view('fund-transfers.index', compact(
             'fundTransfers', 
@@ -137,6 +136,8 @@ class FundTransferController extends Controller
         $ft = FundTransfer::findOrFail($id);
         $ft->update([
             'status' => 'approved',
+            'approved_by' => Auth::id(),
+            'approved_datetime' => now(),
         ]);
 
         return redirect()->back()->with('success', 'Fund transfer approved.');
@@ -150,6 +151,8 @@ class FundTransferController extends Controller
         $ft = FundTransfer::findOrFail($id);
         $ft->update([
             'status' => 'archived',
+            'archived_by' => Auth::id(),
+            'archived_datetime' => now(),
         ]);
 
         return redirect()->back()->with('success', 'Fund transfer archived.');

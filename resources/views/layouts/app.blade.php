@@ -19,6 +19,8 @@
 <!-- Font Awesome 6 Free (Icons only, CSS-based) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vue2-daterange-picker/dist/vue2-daterange-picker.css">
+
 <!-- CSS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/perfect-scrollbar/1.5.5/css/perfect-scrollbar.min.css" />
 
@@ -37,6 +39,12 @@
 
 <!-- XLSX -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- Date Range Picker CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vue2-daterange-picker@0.6.8/dist/vue2-daterange-picker.css">
+
+<script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/vue2-daterange-picker/dist/vue2-daterange-picker.min.js"></script>
 
 
 

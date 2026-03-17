@@ -565,6 +565,7 @@ public function show($id)
         // update order
         $order->update([
             'status' => 'payments',
+            'paid_datetime' => now(),
             'total_payment_rendered' => $totalPaid,
             'change_amount' => $changeAmount,
             'charges_description' => ($order->charges_description ?? '') . "\nPayments added on " . now()->toDateTimeString(),
