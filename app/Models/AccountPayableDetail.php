@@ -34,4 +34,14 @@ class AccountPayableDetail extends Model
     {
         return $this->belongsTo(\App\Models\ChartAccount::class);
     }
+
+    public function payment()
+    {
+        return $this->belongsTo(Payment::class, 'payment_id');
+    }
+
+    public function cashEquivalent()
+    {
+        return $this->belongsTo(CashEquivalent::class);
+    }
 }
