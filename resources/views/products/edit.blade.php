@@ -195,7 +195,7 @@
                                                       name="price" 
                                                       id="price" 
                                                       class="form-control @error('price') is-invalid @enderror" 
-                                                      value="{{ old('price', $product->price) }}">
+                                                      value="{{ old('price', $branchProduct->price) }}">
                                                    @error('price')
                                                       <div class="invalid-feedback">{{ $message }}</div>
                                                    @enderror
@@ -213,7 +213,7 @@
                                                       name="quantity" 
                                                       id="quantity" 
                                                       class="form-control @error('quantity') is-invalid @enderror" 
-                                                      value="{{ old('quantity', $product->quantity) }}">
+                                                      value="{{ old('quantity', $branchProduct->quantity) }}">
                                                    @error('quantity')
                                                       <div class="invalid-feedback">{{ $message }}</div>
                                                    @enderror

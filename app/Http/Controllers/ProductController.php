@@ -212,82 +212,108 @@ class ProductController extends Controller
 }
 
     public function update(Request $request, $id)
-    {
-        $product = Product::findOrFail($id);
+{
+    $product = Product::findOrFail($id);
 
-        $validated = $request->validate([
-            'code' => 'required|string|unique:products,code,' . $product->id,
-            'name' => 'required|string',
-            'price' => 'required|numeric',
-            'category_id' => 'required|exists:categories,id',
-            'subcategory_id' => 'nullable|exists:subcategories,id',
-            'image' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
+    $validated = $request->validate([
+        'code' => 'required|string|unique:products,code,' . $product->id,
+        'name' => 'required|string',
+        'price' => 'required|numeric',
+        'category_id' => 'required|exists:categories,id',
+        'subcategory_id' => 'nullable|exists:subcategories,id',
+        'image' => 'nullable|image|mimes:jpg,jpeg,png,gif|max:2048',
 
-            'station_id' => 'required|exists:stations,id',
-            'quantity' => 'required|numeric|min:0',
-            'unit_id' => 'required|exists:units,id',
+        'station_id' => 'required|exists:stations,id',
+        'quantity' => 'required|numeric|min:0',
+        'unit_id' => 'required|exists:units,id',
 
-            'recipes' => 'nullable|array',
-            'recipes.*.component_id' => 'required|exists:components,id',
-            'recipes.*.quantity' => 'required|numeric',
-            'recipes.*.unit' => 'required|string',
-            'recipes.*.cost' => 'nullable|numeric',
+        'recipes' => 'nullable|array',
+        'recipes.*.component_id' => 'required|exists:components,id',
+        'recipes.*.quantity' => 'required|numeric',
+        'recipes.*.unit' => 'required|string',
+        'recipes.*.cost' => 'nullable|numeric',
+    ]);
+
+    DB::beginTransaction();
+
+    try {
+        // ✅ ONLY product fields
+        $productData = Arr::only($validated, [
+            'code',
+            'name',
+            'category_id',
+            'subcategory_id',
+            'station_id',
+            'unit_id',
         ]);
 
-        DB::beginTransaction();
-        try {
-                $productData = Arr::only($validated, [
-                'code',
-                'name',
-                'price',
-                'category_id',
-                'subcategory_id',
-                'station_id',
-                'unit_id',
-                'quantity',
-            ]);
-
-            // Handle new image upload
-            if ($request->hasFile('image')) {
-                // delete old image if exists
-                if ($product->image && Storage::disk('public')->exists($product->image)) {
-                    Storage::disk('public')->delete($product->image);
-                }
-                $productData['image'] = $request->file('image')->store('products', 'public');
+        // image
+        if ($request->hasFile('image')) {
+            if ($product->image && Storage::disk('public')->exists($product->image)) {
+                Storage::disk('public')->delete($product->image);
             }
-
-            $product->update($productData);
-
-            if ($request->has('recipes')) {
-                $existingIds = $product->recipes()->pluck('id')->toArray();
-                $submittedIds = [];
-
-                foreach ($validated['recipes'] as $recipeData) {
-                    if (!empty($recipeData['id'])) {
-                        $recipe = $product->recipes()->find($recipeData['id']);
-                        if ($recipe) {
-                            $recipe->update($recipeData);
-                            $submittedIds[] = $recipe->id;
-                        }
-                    } else {
-                        $newRecipe = $product->recipes()->create($recipeData);
-                        $submittedIds[] = $newRecipe->id;
-                    }
-                }
-
-                $toDelete = array_diff($existingIds, $submittedIds);
-                if (!empty($toDelete)) {
-                    $product->recipes()->whereIn('id', $toDelete)->delete();
-                }
-            }
-
-            DB::commit();
-            return redirect()->route('products.index')->with('success', 'Product updated successfully.');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withInput()->withErrors(['error' => 'Failed to update product: ' . $e->getMessage()]);
+            $productData['image'] = $request->file('image')->store('products', 'public');
         }
+
+        $product->update($productData);
+
+        // ✅ update branch_products
+        $branch = current_branch_id();
+
+        $branchProduct = BranchProduct::where('product_id', $product->id)
+            ->where('branch_id', $branch)
+            ->first();
+
+        if ($branchProduct) {
+            $branchProduct->update([
+                'price' => $validated['price'],
+                'quantity' => $validated['quantity'],
+            ]);
+        } else {
+            BranchProduct::create([
+                'product_id' => $product->id,
+                'branch_id' => $branch,
+                'price' => $validated['price'],
+                'quantity' => $validated['quantity'],
+            ]);
+        }
+
+        // ✅ recipes (your logic is already good 👍)
+        if ($request->has('recipes')) {
+            $existingIds = $product->recipes()->pluck('id')->toArray();
+            $submittedIds = [];
+
+            foreach ($validated['recipes'] as $recipeData) {
+                if (!empty($recipeData['id'])) {
+                    $recipe = $product->recipes()->find($recipeData['id']);
+                    if ($recipe) {
+                        $recipe->update($recipeData);
+                        $submittedIds[] = $recipe->id;
+                    }
+                } else {
+                    $newRecipe = $product->recipes()->create($recipeData);
+                    $submittedIds[] = $newRecipe->id;
+                }
+            }
+
+            $toDelete = array_diff($existingIds, $submittedIds);
+            if (!empty($toDelete)) {
+                $product->recipes()->whereIn('id', $toDelete)->delete();
+            }
+        }
+
+        DB::commit();
+
+        return redirect()->route('products.index')
+            ->with('success', 'Product updated successfully.');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->withInput()->withErrors([
+            'error' => 'Failed to update product: ' . $e->getMessage()
+        ]);
     }
+}
 
     public function destroy(Product $product)
     {
