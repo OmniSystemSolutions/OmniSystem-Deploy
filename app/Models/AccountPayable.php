@@ -18,6 +18,7 @@ class AccountPayable extends Model
         'payer_tin',
         'due_date',
         'status',
+        'paid_datetime'
     ];
 
     protected $casts = [

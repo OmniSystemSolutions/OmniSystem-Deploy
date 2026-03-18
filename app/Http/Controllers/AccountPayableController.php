@@ -320,6 +320,7 @@ class AccountPayableController extends Controller
             // 3️⃣ Update AP status if fully paid
             if ($apDetail->amount_to_pay >= $apDetail->total_amount) {
                 $ap->status = 'completed';
+                $ap->paid_datetime = now();
             } else {
                 // keep existing status (pending or approved)
                 $ap->status = $ap->status === 'pending' ? 'approved' : $ap->status;
