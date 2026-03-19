@@ -14,8 +14,18 @@ class GeneralLedgerController extends Controller
 {
     public function index()
     {
-        $cash_equivalents = CashEquivalent::all();
-        
+        $cash_equivalents = CashEquivalent::all()->map(function ($ce) {
+            $excluded = ['cash on hand', 'revolving fund', 'petty cash'];
+            $nameLower = strtolower($ce->name);
+
+             // Use accountable user's name if in excluded list
+            $ce->display_label = in_array($nameLower, $excluded)
+                ? $ce->name . ' - ' . ($ce->accountable ? $ce->accountable->name : 'N/A')
+                : $ce->name . ' - ' . $ce->account_number;
+
+                return $ce;
+            });
+
         return view('reports.general-ledger.index', [
             'cashEquivalents' => $cash_equivalents
         ]);

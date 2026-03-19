@@ -92,7 +92,7 @@
                   placeholder="Select Cash Equivalent"
                   :options="cashEquivalents"
                   :clearable="false"
-                  label="account_number">
+                  label="display_label">
                </v-select>
             </fieldset>
 
@@ -348,33 +348,43 @@ new Vue({
             return [...this.computedLedger].reverse();
          },
          summary() {
-    const data = this.computedLedger;
+            const data = this.computedLedger;
 
-    let beginningBalance = 0;
-    let totalDebit = 0;
-    let totalCredit = 0;
-    let endingBalance = 0;
+            let beginningBalance = 0;
+            let totalDebit = 0;
+            let totalCredit = 0;
+            let endingBalance = 0;
 
-    if (data.length > 0) {
-        // ✅ FIRST ROW (earliest / lowest date)
-        beginningBalance = data[0].running_balance;
+            if (data.length > 0) {
+               // ✅ FIRST ROW (earliest / lowest date)
+               beginningBalance = data[0].running_balance;
 
-        // ✅ LAST ROW
-        endingBalance = data[data.length - 1].running_balance;
-    }
+               // ✅ LAST ROW
+               endingBalance = data[data.length - 1].running_balance;
+            }
 
-    data.forEach(row => {
-        totalDebit += Number(row.debit ?? 0);
-        totalCredit += Number(row.credit ?? 0);
-    });
+            data.forEach(row => {
+               totalDebit += Number(row.debit ?? 0);
+               totalCredit += Number(row.credit ?? 0);
+            });
 
-    return {
-        beginningBalance,
-        totalDebit,
-        totalCredit,
-        endingBalance
-    };
-}
+            return {
+               beginningBalance,
+               totalDebit,
+               totalCredit,
+               endingBalance
+            };
+         },
+         selectedValue() {
+            if (!this.selectedCashEquivalent) return null;
+
+            const name = this.selectedCashEquivalent.name.toLowerCase();
+            const excluded = ['cash on hand', 'revolving fund', 'petty cash'];
+
+            return excluded.includes(name)
+               ? this.selectedCashEquivalent.accountable?.id
+               : this.selectedCashEquivalent.account_number;
+         }
       },
       watch: {
          startDate() {
