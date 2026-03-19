@@ -301,25 +301,31 @@ new Vue({
                return date.toLocaleString(); // you can customize format
             },
             fetchLedger() {
-               console.log('START DATE:', this.startDate);
-               console.log('END DATE:', this.endDate);
-               console.log('SELECTED CASH:', this.selectedCashEquivalent);
+    console.log('START DATE:', this.startDate);
+    console.log('END DATE:', this.endDate);
+    console.log('SELECTED CASH:', this.selectedCashEquivalent);
 
-               axios.get('/reports/general-ledger/fetch', {
-                  params: {
-                        start_date: this.startDate,
-                        end_date: this.endDate,
-                        cash_equivalent_id: this.selectedCashEquivalent?.id
-                  }
-               })
-               .then(response => {
-                  console.log('RESPONSE:', response.data); // ✅ THIS is what you want
-                  this.ledgerData = response.data;
-               })
-               .catch(error => {
-                  console.error('ERROR:', error);
-               });
-            }
+    // ❌ DO NOT FETCH if nothing selected
+    if (!this.selectedCashEquivalent) {
+        this.ledgerData = []; // clear table
+        return;
+    }
+
+    axios.get('/reports/general-ledger/fetch', {
+        params: {
+            start_date: this.startDate,
+            end_date: this.endDate,
+            cash_equivalent_id: this.selectedCashEquivalent.id
+        }
+    })
+    .then(response => {
+        console.log('RESPONSE:', response.data);
+        this.ledgerData = response.data;
+    })
+    .catch(error => {
+        console.error('ERROR:', error);
+    });
+}
       },
       computed: {
          computedLedger() {
