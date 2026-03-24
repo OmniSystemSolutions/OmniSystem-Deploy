@@ -31,17 +31,30 @@ class InventoryPurchaseOrderController extends Controller
     {
         $suppliers = Supplier::where('status', 'active')->get();
         $users = User::where('status', 'active')->get();
-        $components = Component::all(); 
         $branches = Branch::all();
 
-    // Determine the current user's primary branch from the pivot `branch_user` table.
-    $currentBranch = auth()->check() ? auth()->user()->branches()->first() : null;
+        // Get current branch
+        $currentBranchId = current_branch_id();
 
-    // If the authenticated user doesn't have a branch assigned via pivot,
-    // fall back to the first available branch so the UI preview isn't empty.
-    $currentBranchId = $currentBranch->id ?? ($branches->first()->id ?? null);
+        // ✅ Fetch components + quantity from branch_components
+        $components = Component::with(['supplier', 'category', 'unit'])
+            ->leftJoin('branch_components', function ($join) use ($currentBranchId) {
+                $join->on('components.id', '=', 'branch_components.component_id')
+                    ->where('branch_components.branch_id', '=', $currentBranchId);
+            })
+            ->select(
+                'components.*',
+                'branch_components.onhand as branch_quantity'
+            )
+            ->get();
 
-    return view('inventory_purchase_orders.create', compact('suppliers', 'users', 'components', 'branches', 'currentBranchId'));
+        return view('inventory_purchase_orders.create', compact(
+            'suppliers',
+            'users',
+            'components',
+            'branches',
+            'currentBranchId'
+        ));
     }
 
     public function store(Request $request)
@@ -53,7 +66,6 @@ class InventoryPurchaseOrderController extends Controller
             'type_of_request' => 'nullable|string|max:255',
             'select_origin' => 'nullable|string|max:255',
             'supplier_id' => 'required|exists:suppliers,id',
-            'branch_id' => 'required|exists:branches,id',
             'components' => 'required|array|min:1',
             'components.*.id' => 'required|exists:components,id',
             'components.*.unit_cost' => 'required|numeric|min:0',
@@ -62,7 +74,7 @@ class InventoryPurchaseOrderController extends Controller
         ]);
 
         // 🔹 Use branch_id in PO numbering pattern: PO-[BranchID]-000001
-        $branchId = $validated['branch_id'];
+        $branchId = current_branch_id();
 
         // 🔹 Find last numeric sequence for this branch robustly (handles leading zeros)
         $maxSeq = \DB::table('inventory_purchase_orders')
@@ -86,29 +98,48 @@ class InventoryPurchaseOrderController extends Controller
         // 🔹 Create the Purchase Order
         $purchaseOrder = InventoryPurchaseOrder::create($validated);
 
+        $components = Component::with('branchStocks')->whereIn('id', collect($request->components)->pluck('id'))->get()->keyBy('id');
+
         // 🔹 Loop through components added. Do NOT increase component onhand here since PO is still pending.
         foreach ($request->components as $compData) {
-            $component = Component::findOrFail($compData['id']);
+            $component = $components[$compData['id']];
+
             $qty = (int) $compData['qty'];
             $unitCost = (float) $compData['unit_cost'];
-            $tax = ($unitCost * $qty) * $taxRate;
 
-            // 🔹 Save to po_details table (unit_cost column exists)
+            // ✅ Get branch stock
+            $branchStock = $component->branchStocks()
+                ->where('branch_id', $branchId)
+                ->first();
+
+            // ✅ If not exists, create it
+            if (!$branchStock) {
+                $branchStock = $component->branchStocks()->firstOrCreate(
+                    ['branch_id' => $branchId],
+                    ['onhand' => 0]
+                );
+            }
+
+            $onhand = $branchStock->onhand;
+
+            // ✅ Compute
+            $subTotal = $qty * $unitCost;
+            $tax = $subTotal * $taxRate;
+
+            // ✅ Save
             $purchaseOrder->details()->create([
                 'component_id' => $component->id,
                 'qty' => $qty,
                 'unit_cost' => $unitCost,
                 'tax' => $tax,
-                'sub_total' => $qty * $unitCost,
-                'onhand' => $component->onhand ?? 0,
+                'sub_total' => $subTotal,
+                'onhand' => $onhand,
             ]);
 
-            // 🔹 Update latest cost only (do NOT change onhand until goods are received)
             $component->update([
                 'cost' => $unitCost,
             ]);
         }
-
         return redirect()->route('inventory_purchase_orders.index')
             ->with('success', 'Purchase Order created successfully with attachment and components updated.');
     }
@@ -125,27 +156,68 @@ class InventoryPurchaseOrderController extends Controller
     }
 
     public function getDetails($id)
-    {
-        $po = InventoryPurchaseOrder::with(['details.component', 'user', 'supplier'])
-        ->findOrFail($id);
+{
+    $po = InventoryPurchaseOrder::with([
+        'details.component.unit',
+        'details.component.supplier',
+        'details.component.category',
+        'user',
+        'supplier'
+    ])->findOrFail($id);
 
-    return response()->json($po);
-    }
+    // Transform details so frontend has exactly what it expects
+    $poArray = $po->toArray(); // convert to array first
+
+    $poArray['details'] = collect($poArray['details'])->map(function ($d) {
+        return [
+            'component' => [
+                'name' => $d['component']['name'] ?? '—',
+                'code' => $d['component']['code'] ?? '—',
+                'unit' => $d['component']['unit']['name'] ?? '—',
+            ],
+            'qty' => $d['qty'] ?? 0,
+            'unit_cost' => $d['unit_cost'] ?? 0,
+            'sub_total' => $d['sub_total'] ?? 0,
+        ];
+    });
+
+    return response()->json($poArray);
+}
 
     public function edit($id)
     {
-        $purchaseOrder = InventoryPurchaseOrder::with(['details.component', 'supplier', 'user'])->findOrFail($id);
+        $purchaseOrder = InventoryPurchaseOrder::with([
+            'details.component' => function ($query) {
+                $query->with([
+                    'unit',
+                    'supplier',
+                    'category',
+                    'branchStockForCurrent' // ✅ load branch stocks from Component model
+                ]);
+            },
+            'supplier',
+            'user'
+        ])->findOrFail($id);
+
         $suppliers = Supplier::where('status', 'active')->get();
         $users = User::where('status', 'active')->get();
-        $components = Component::all();
 
-        return view('inventory_purchase_orders.edit', compact('purchaseOrder', 'suppliers', 'users', 'components'));
+        // all components for selection
+        $components = Component::with(['unit', 'supplier', 'category', 'branchStockForCurrent'])->get();
+
+        return view('inventory_purchase_orders.edit', compact(
+            'purchaseOrder',
+            'suppliers',
+            'users',
+            'components'
+        ));
     }
 
     public function update(Request $request, $id)
     {
         $purchaseOrder = InventoryPurchaseOrder::findOrFail($id);
 
+        // ✅ Validate input (matches store)
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'department' => 'nullable|string|max:255',
@@ -153,15 +225,96 @@ class InventoryPurchaseOrderController extends Controller
             'type_of_request' => 'nullable|string|max:255',
             'select_origin' => 'nullable|string|max:255',
             'supplier_id' => 'required|exists:suppliers,id',
+
+            'components' => 'required|array|min:1',
+            'components.*.id' => 'required|exists:components,id',
+            'components.*.unit_cost' => 'required|numeric|min:0',
+            'components.*.qty' => 'required|integer|min:1',
+
+            'attachment' => 'nullable|file|max:5120',
         ]);
 
-        // 🔹 Handle file upload (replace existing if new one is uploaded)
+        $branchId = current_branch_id();
+        $taxRate = 0.12;
+
+        // 🔹 Handle attachment
         if ($request->hasFile('attachment')) {
             $filePath = $request->file('attachment')->store('purchase_orders', 'public');
             $validated['attachment'] = $filePath;
         }
 
+        // 🔹 Update main PO
         $purchaseOrder->update($validated);
+
+        // 🔹 Preload existing details keyed by component_id
+        $existingDetails = $purchaseOrder->details()->get()->keyBy('component_id');
+
+        // 🔹 Preload components keyed by ID
+        $submittedComponents = collect($request->components)->keyBy('id');
+        $components = Component::with('branchStocks')
+            ->whereIn('id', $submittedComponents->keys())
+            ->get()
+            ->keyBy('id');
+
+        // 🔹 Loop through submitted components
+        foreach ($submittedComponents as $compId => $compData) {
+            $component = $components[$compId];
+
+            $qty = (int) $compData['qty'];
+            $unitCost = (float) $compData['unit_cost'];
+
+            // ✅ Get or create branch stock
+            $branchStock = $component->branchStocks()->firstOrCreate(
+                ['branch_id' => $branchId],
+                ['onhand' => 0]
+            );
+            $onhand = $branchStock->onhand;
+
+            $subTotal = $qty * $unitCost;
+            $tax = $subTotal * $taxRate;
+
+            if ($existingDetails->has($compId)) {
+                // ✅ Update only if values changed
+                $detail = $existingDetails[$compId];
+                if (
+                    $detail->qty != $qty ||
+                    $detail->unit_cost != $unitCost ||
+                    $detail->tax != $tax ||
+                    $detail->sub_total != $subTotal ||
+                    $detail->onhand != $onhand
+                ) {
+                    $detail->update([
+                        'qty' => $qty,
+                        'unit_cost' => $unitCost,
+                        'tax' => $tax,
+                        'sub_total' => $subTotal,
+                        'onhand' => $onhand,
+                    ]);
+                }
+
+                // ✅ Remove from $existingDetails to mark as processed
+                $existingDetails->forget($compId);
+
+            } else {
+                // ✅ Insert new detail
+                $purchaseOrder->details()->create([
+                    'component_id' => $compId,
+                    'qty' => $qty,
+                    'unit_cost' => $unitCost,
+                    'tax' => $tax,
+                    'sub_total' => $subTotal,
+                    'onhand' => $onhand,
+                ]);
+            }
+
+            // ✅ Update latest cost
+            $component->update(['cost' => $unitCost]);
+        }
+
+        // 🔹 Delete removed components
+        foreach ($existingDetails as $detail) {
+            $detail->delete();
+        }
 
         return redirect()->route('inventory_purchase_orders.index')
             ->with('success', 'Purchase Order updated successfully.');

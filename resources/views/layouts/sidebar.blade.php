@@ -198,17 +198,31 @@
                         <span class="item-name">Sales Journal</span>
                      </a>
                   </li>
+               </ul>
+            </li>
+            <li class="nav-item"><a href="/app/reports/y-reading" class=""><i class="nav-icon i-Building"></i> <span class="item-name">Inventory</span></a> </li>
+            <li class="nav-item"><a href="/app/reports/y-reading" class=""><i class="nav-icon i-Library"></i> <span class="item-name">Workforce</span></a> </li>
+            <li class="nav-item dropdown-sidemenu">
+               <a href="#">
+                  <i class="nav-icon i-Receipt-3"></i> 
+                  <span class="item-name">Accounting</span>
+                  <i class="dd-arrow i-Arrow-Down"></i>
+               </a>
+               <ul class="submenu">
                   <li class="nav-item">
                      <a href="{{ route('general-ledger.index') }}" class="">
                         <i class="fa-solid fa-stairs"></i>
                         <span class="item-name">General Ledger</span>
                      </a>
                   </li>
+                  <li class="nav-item">
+                     <a href="{{ route('procurement-request.index') }}" class="">
+                        <i class="fa-regular fa-file-lines" style="font-size:20px;"></i>
+                        <span class="item-name" style="margin-left: 5px;">PRF - Procurement Request Form</span>
+                     </a>
+                  </li>
                </ul>
             </li>
-            <li class="nav-item"><a href="/app/reports/y-reading" class=""><i class="nav-icon i-Building"></i> <span class="item-name">Inventory</span></a> </li>
-            <li class="nav-item"><a href="/app/reports/y-reading" class=""><i class="nav-icon i-Library"></i> <span class="item-name">Workforce</span></a> </li>
-            <li class="nav-item"><a href="/app/reports/y-reading" class=""><i class="nav-icon i-Receipt-3"></i> <span class="item-name">Accounting</span></a> </li>
          </ul>
          <ul data-parent="Workforce" class="childNav d-none">
             {{-- <li class="nav-item"><a href="/app/workforce/upload-files" class=""><i class="nav-icon i-Upload-Window"></i> <span class="item-name">Upload Employee Files</span></a></li>

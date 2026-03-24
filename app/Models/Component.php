@@ -68,4 +68,15 @@ class Component extends Model
     {
         return $this->belongsTo(Station::class);
     }
+
+    public function branchStockForCurrent()
+    {
+        return $this->hasOne(BranchComponent::class)
+                    ->where('branch_id', current_branch_id());
+    }
+
+    public function onhandForCurrentBranch()
+    {
+        return $this->branchStockForCurrent()->value('onhand') ?? 0;
+    }
 }
