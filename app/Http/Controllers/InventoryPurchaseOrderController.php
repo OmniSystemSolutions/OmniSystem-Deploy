@@ -27,35 +27,50 @@ class InventoryPurchaseOrderController extends Controller
         return view('inventory_purchase_orders.index', compact('purchaseOrders', 'status'));
     }
 
-    public function create()
-    {
-        $suppliers = Supplier::where('status', 'active')->get();
-        $users = User::where('status', 'active')->get();
-        $branches = Branch::all();
+    public function create(Request $request)
+{
+    $suppliers = Supplier::where('status', 'active')->get();
+    $users = User::where('status', 'active')->get();
+    $branches = Branch::all();
 
-        // Get current branch
-        $currentBranchId = current_branch_id();
+    $currentBranchId = current_branch_id();
+    $perPage = $request->get('per_page', 10);
+    $search = $request->get('search');
 
-        // ✅ Fetch components + quantity from branch_components
-        $components = Component::with(['supplier', 'category', 'unit'])
-            ->leftJoin('branch_components', function ($join) use ($currentBranchId) {
-                $join->on('components.id', '=', 'branch_components.component_id')
-                    ->where('branch_components.branch_id', '=', $currentBranchId);
-            })
-            ->select(
-                'components.*',
-                'branch_components.onhand as branch_quantity'
-            )
-            ->get();
+    $components = Component::with([
+            'supplier',
+            'category',
+            'unit',
+            'branchStocks' => function ($q) use ($currentBranchId) {
+                $q->where('branch_id', $currentBranchId);
+            }
+        ])
+        ->when($search, function ($query) use ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('components.name', 'like', "%{$search}%")
+                  ->orWhere('components.code', 'like', "%{$search}%")
+                  ->orWhereHas('supplier', function ($q2) use ($search) {
+                      $q2->where('fullname', 'like', "%{$search}%");
+                  })
+                  ->orWhereHas('category', function ($q3) use ($search) {
+                      $q3->where('name', 'like', "%{$search}%");
+                  });
+            });
+        })
+        ->paginate($perPage)
+        ->appends([
+            'per_page' => $perPage,
+            'search' => $search
+        ]);
 
-        return view('inventory_purchase_orders.create', compact(
-            'suppliers',
-            'users',
-            'components',
-            'branches',
-            'currentBranchId'
-        ));
-    }
+    return view('inventory_purchase_orders.create', compact(
+        'suppliers',
+        'users',
+        'components',
+        'branches',
+        'currentBranchId'
+    ));
+}
 
     public function store(Request $request)
     {
@@ -73,8 +88,9 @@ class InventoryPurchaseOrderController extends Controller
             'attachment' => 'nullable|file|max:5120', // optional, max 5MB
         ]);
 
-        // 🔹 Use branch_id in PO numbering pattern: PO-[BranchID]-000001
+        // 🔹 Add branch_id manually
         $branchId = current_branch_id();
+        $validated['branch_id'] = $branchId;
 
         // 🔹 Find last numeric sequence for this branch robustly (handles leading zeros)
         $maxSeq = \DB::table('inventory_purchase_orders')

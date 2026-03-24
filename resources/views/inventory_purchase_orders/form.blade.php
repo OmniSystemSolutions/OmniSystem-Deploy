@@ -10,11 +10,6 @@
    </div>
    <div class="separator-breadcrumb border-top"></div>
 </div>
-{{-- @foreach($components as $component)
-<pre>
-    @php var_dump($component); @endphp
-</pre>
-@endforeach --}}
 <div class="wrapper">
    <form 
       action="{{ isset($purchaseOrder) 
@@ -218,6 +213,19 @@
                      <div class="card mb-4">
                         <div class="card-header">Select Items</div>
                         <div class="card-body">
+                           <div class="d-flex justify-content-between mb-3">
+                              <div class="input-group" style="max-width: 500px;">
+                                 <input 
+                                       type="text" 
+                                       id="componentSearch" 
+                                       class="form-control" 
+                                       placeholder="Search name, SKU, supplier..." 
+                                       value="{{ request('search') }}"
+                                 >
+                                 <button type="button" class="btn btn-primary" onclick="searchComponents()">Search</button>
+                                 <button type="button" class="btn btn-secondary" onclick="clearSearch()">Clear</button>
+                              </div>
+                           </div>
                            <table class="table table-hover" id="componentsTable">
                               <thead>
                                  <tr>
@@ -246,6 +254,7 @@
                                        data-brand="{{ $component->brand ?? '-' }}" 
                                        data-unit="{{ $component->unit->name ?? '-' }}" 
                                        data-onhand="{{ $component->onhandForCurrentBranch() ?? 0 }}"
+                                       data-cost="{{ $component->costForCurrentBranch() ?? 0 }}"
                                        @if(isset($purchaseOrder) && $purchaseOrder->details->pluck('component.id')->contains($component->id))
                                        checked
                                        @endif
@@ -262,12 +271,54 @@
                                  @endforeach
                               </tbody>
                            </table>
+                           <div class="d-flex justify-content-between align-items-center mt-3">
+
+                           <!-- Rows per page -->
+                           {{-- <form method="GET"> --}}
+                              <label>Rows per page:</label>
+                              <select name="per_page" onchange="changePerPage(this.value)">
+                                    <option value="10" {{ request('per_page') == 10 ? 'selected' : '' }}>10</option>
+                                    <option value="20" {{ request('per_page') == 20 ? 'selected' : '' }}>20</option>
+                                    <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>
+                                    <option value="100" {{ request('per_page') == 100 ? 'selected' : '' }}>100</option>
+                              </select>
+                           {{-- </form> --}}
+
+                           <!-- Showing info -->
+                           <div>
+                              @if($components->total() > 0)
+                                    Showing {{ $components->firstItem() }} to {{ $components->lastItem() }} 
+                                    of {{ $components->total() }} entries
+                              @else
+                                    <span class="text-muted">No entries found</span>
+                              @endif
+                           </div>
+
+                           <!-- Pagination buttons -->
+                           <div>
+                              {{-- Previous --}}
+                              @if ($components->onFirstPage())
+                                    <button class="btn btn-sm btn-secondary" disabled>Prev</button>
+                              @else
+                                    <a href="{{ $components->previousPageUrl() }}" class="btn btn-sm btn-primary">Prev</a>
+                              @endif
+
+                              {{-- Next --}}
+                              @if ($components->hasMorePages())
+                                    <a href="{{ $components->nextPageUrl() }}" class="btn btn-sm btn-primary">Next</a>
+                              @else
+                                    <button class="btn btn-sm btn-secondary" disabled>Next</button>
+                              @endif
+                           </div>
+
+                        </div>
                         </div>
                      </div>
                      <!-- Summary -->
                      <div class="card">
                         <div class="card-header">Summary</div>
-                            <div class="card-body">+<div class="table-responsive">
+                            <div class="card-body">
+                              <div class="table-responsive">
                                 <table class="table" id="summaryTable">
                                     <thead>
                                         <tr>
@@ -306,6 +357,32 @@
    </div>
 </div>
 <script>
+   function changePerPage(value) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('per_page', value);
+    url.searchParams.set('page', 1); // reset page
+    window.location.href = url.toString();
+}
+function searchComponents() {
+    const search = document.getElementById('componentSearch').value;
+    const perPage = {{ request('per_page', 10) }};
+
+    let url = new URL(window.location.href);
+    url.searchParams.set('search', search);
+    url.searchParams.set('per_page', perPage);
+    url.searchParams.set('page', 1); // reset to first page
+    window.location.href = url.toString();
+}
+
+function clearSearch() {
+    const perPage = {{ request('per_page', 10) }};
+
+    let url = new URL(window.location.href);
+    url.searchParams.delete('search'); // remove search
+    url.searchParams.set('per_page', perPage);
+    url.searchParams.set('page', 1); // reset to first page
+    window.location.href = url.toString();
+}
 document.addEventListener('DOMContentLoaded', () => {
     const checkboxes = document.querySelectorAll('.component-checkbox');
     const summaryBody = document.querySelector('#summaryTable tbody');
@@ -345,10 +422,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <td>${this.dataset.onhand}</td>
 
                         <td>
-                            <input type="number" 
-                                name="components[${id}][unit_cost]" 
-                                class="form-control cost" 
-                                value="0" min="0" step="0.01">
+                           <input type="number" 
+                              name="components[{{ $component->id }}][unit_cost]" 
+                              class="form-control cost" 
+                              value="${this.dataset.cost}" 
+                              min="0" step="0.01">
                         </td>
 
                         <td>

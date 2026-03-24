@@ -79,4 +79,8 @@ class Component extends Model
     {
         return $this->branchStockForCurrent()->value('onhand') ?? 0;
     }
+    public function costForCurrentBranch()
+    {
+        return $this->branchStockForCurrent()->value('cost') ?? 0;
+    }
 }
