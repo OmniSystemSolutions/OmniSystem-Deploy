@@ -65,6 +65,26 @@
                      <input type="text" class="form-control" v-model="form.referenceNo" readonly>
                   </fieldset>
                </div>
+               <!-- Requesting Branch -->
+               <div class="col-sm-12 col-md-6 col-lg-4">
+                  <fieldset class="form-group">
+                     <legend class="col-form-label pt-0">Requesting Branch</legend>
+                     <v-select
+                        v-model="form.selectedBranch"
+                        :options="branchesOptions"
+                        :clearable="false"
+                        placeholder="Select Branch"
+                        label="label">
+                     </v-select>
+                  </fieldset>
+               </div>
+               {{-- Origin --}}
+               <div class="col-sm-12 col-md-6 col-lg-4">
+                  <fieldset class="form-group">
+                     <legend tabindex="-1" class="bv-no-focus-ring col-form-label pt-0">Origin</legend>
+                     <v-select v-model="form.selectedOrigin" :options="originOptions" :clearable="true" label="label"></v-select>
+                  </fieldset>
+               </div>
                {{-- Proforma Reference # --}}
                <div class="col-sm-12 col-md-6 col-lg-4">
                   <fieldset class="form-group">
@@ -75,13 +95,6 @@
                            v-model="form.proformaReferenceNo"
                            />
                      </div>
-                  </fieldset>
-               </div>
-               {{-- Origin --}}
-               <div class="col-sm-12 col-md-6 col-lg-4">
-                  <fieldset class="form-group">
-                     <legend tabindex="-1" class="bv-no-focus-ring col-form-label pt-0">Origin</legend>
-                     <v-select v-model="form.selectedOrigin" :options="originOptions" :clearable="true" label="label"></v-select>
                   </fieldset>
                </div>
                <!-- Products Table -->
@@ -222,6 +235,7 @@ new Vue({
        data() {
            return {
                mode: '{{ $mode }}',
+               currentBranchId: @json($currentBranchId ?? null),
                details: @json($details ?? []),
                form: {
                    id: @json($prfs->id ?? null),
@@ -235,11 +249,18 @@ new Vue({
                    attached_file: null,
                    proformaReferenceNo: '',
                    selectedRequestor: null,
+                   selectedBranch: null,
                    selectedOrigin: 'local',
                    selectedItems: [],
                },
                requestorOptions: @json(
                    $requestors->map(fn ($b) => [
+                       'label' => $b->name,
+                       'value' => $b->id
+                   ])
+               ),
+               branchesOptions: @json(
+                   $branches->map(fn ($b) => [
                        'label' => $b->name,
                        'value' => $b->id
                    ])
@@ -275,6 +296,11 @@ new Vue({
             }
         },
         mounted() {
+            if (this.currentBranchId) {
+                  this.form.selectedBranch = this.branchesOptions.find(
+                        b => b.value === this.currentBranchId
+                  );
+               }
             if (this.mode === 'edit') {
                this.initEdit();
             }
@@ -300,6 +326,11 @@ new Vue({
     // 🔹 Requestor
     this.form.selectedRequestor = this.requestorOptions.find(
         r => r.value === prf.requested_by
+    );
+
+    // 🔹 Branch
+    this.form.selectedBranch = this.branchesOptions.find(
+        b => b.value === prf.requesting_branch_id
     );
 
     const details = this.details || {};
@@ -495,6 +526,9 @@ new Vue({
         if (this.selectedItems.length === 0) {
             return Swal.fire('Error', 'Please select at least one item', 'warning');
         }
+        if (!this.form.selectedBranch) {
+            return Swal.fire('Error', 'Please select requesting branch', 'warning');
+        }
 
         // 🔴 GROUP ITEMS
         const groupedItems = {
@@ -527,6 +561,7 @@ new Vue({
             reference_no: this.form.referenceNo,
             requested_datetime: this.form.requested_datetime,
             requested_by: this.form.selectedRequestor.value,
+            requesting_branch_id: this.form.selectedBranch?.value ?? null,
             type: this.form.selectedType.value,
             subtype: this.form.selectedSubType?.value ?? null,
             origin: this.form.selectedOrigin?.value ?? 'local',

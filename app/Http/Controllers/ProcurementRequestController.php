@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Branch;
 use App\Models\Component;
 use App\Models\ProcurementRequest;
 use App\Models\Product;
@@ -99,12 +100,15 @@ class ProcurementRequestController extends Controller
         );
 
         $requestors = User::all();
+        $branches = Branch::all();
 
         return view('reports.procurement-request.form', [
              'mode' => 'create',
              'prfs' => null,
              'referenceNo' => $reference_no,
-             'requestors' => $requestors
+             'requestors' => $requestors,
+             'branches' => $branches,
+             'currentBranchId' => $currentBranchId
              ]);
     }
 
@@ -213,13 +217,14 @@ public function store(Request $request)
     $prf = ProcurementRequest::findOrFail($id);
 
     $requestors = User::all();
-
+    $branches = Branch::all();
     $details =$prf->details;
 
     return view('reports.procurement-request.form', [
         'mode' => 'edit',
         'prfs' => $prf,
         'requestors' => $requestors,
+        'branches' => $branches,
         'details' => $details, // 🔥 pass to Vue if needed
     ]);
 }
