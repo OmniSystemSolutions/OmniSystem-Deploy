@@ -102,6 +102,7 @@ class ProcurementRequestController extends Controller
 
         return view('reports.procurement-request.form', [
              'mode' => 'create',
+             'prfs' => null,
              'referenceNo' => $reference_no,
              'requestors' => $requestors
              ]);
