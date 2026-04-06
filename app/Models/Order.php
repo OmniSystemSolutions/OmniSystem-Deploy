@@ -35,7 +35,11 @@ class Order extends Model
         'time_submitted',
         'cashier_id',
         'reservation_id',
-        'paid_datetim'
+        'paid_datetime'
+    ];
+
+    protected $casts = [
+        'paid_datetime' => 'datetime',
     ];
 
     public function user()
