@@ -137,6 +137,29 @@
     background: #ff630f;
     color: #fff;
     }
+   .rotate-handle{
+   position:absolute;
+   top:-26px;
+   left:50%;
+   margin-left:-10px;
+   width:20px;
+   height:20px;
+   background:#fff;
+   border:2px solid #555;
+   border-radius:50%;
+   cursor:grab;
+   display:flex;
+   align-items:center;
+   justify-content:center;
+   font-size:14px;
+   z-index:10;
+   user-select:none;
+   line-height:1;
+   }
+   .rotate-handle:hover{
+   background:#f0f0f0;
+   border-color:#ff630f;
+   }
 
 </style>
 <div class="main-content" id="app">
@@ -351,7 +374,8 @@
            chairs,
            x,
            y,
-           floor
+           floor,
+           rotation: 0
          };
    
          (document._layout = document._layout || []).push(s);
@@ -591,8 +615,9 @@
    },0);
    
    makeResizable(el, s);
+   makeRotatable(el, s);
    attachCommonEvents(el, s);
-   
+
    return el;
    }
    
@@ -649,6 +674,49 @@
    });
    }
    
+   function makeRotatable(el, s){
+   const handle = document.createElement('div');
+   handle.className = 'rotate-handle';
+   handle.textContent = '↻';
+   el.appendChild(handle);
+
+   let rotating = false;
+   let startAngle = 0;
+   let currentRot = s.rotation || 0;
+
+   // apply saved rotation immediately
+   el.style.transform = `rotate(${currentRot}deg)`;
+
+   function getCenter(){
+     const r = el.getBoundingClientRect();
+     return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+   }
+
+   handle.addEventListener('mousedown', e=>{
+     e.stopPropagation();
+     rotating = true;
+     const c = getCenter();
+     startAngle = Math.atan2(e.clientY - c.y, e.clientX - c.x) * 180 / Math.PI - currentRot;
+     document.body.style.cursor = 'grabbing';
+   });
+
+   window.addEventListener('mousemove', e=>{
+     if(!rotating) return;
+     const c = getCenter();
+     currentRot = Math.atan2(e.clientY - c.y, e.clientX - c.x) * 180 / Math.PI - startAngle;
+     el.style.transform = `rotate(${currentRot}deg)`;
+   });
+
+   window.addEventListener('mouseup', ()=>{
+     if(rotating){
+       rotating = false;
+       document.body.style.cursor = '';
+       const idx = (document._layout||[]).findIndex(o=>o.id===s.id);
+       if(idx>=0) document._layout[idx].rotation = currentRot;
+     }
+   });
+   }
+
    function getTableSizeByChairs(chairs){
    const baseWidth = 80;
    const baseHeight = 60;
@@ -775,9 +843,9 @@
    },0);
    
    attachCommonEvents(el, g);
-   
-   makeResizable(el, g); // ✅ THIS IS THE KEY
-   
+   makeResizable(el, g);
+   makeRotatable(el, g);
+
    return el;
    }
    
@@ -891,7 +959,7 @@ const layoutList = document.getElementById('layoutList');
 const layoutNameInput = document.getElementById('layoutName');
 
 // SAVE
-saveLayoutBtn.addEventListener('click', () => {
+saveLayoutBtn.addEventListener('click', async () => {
   const name = layoutNameInput.value.trim();
 
   if(!name){
@@ -899,62 +967,120 @@ saveLayoutBtn.addEventListener('click', () => {
     return;
   }
 
-  const layouts = JSON.parse(localStorage.getItem('layouts') || '{}');
+  // 🔥 GROUP BY FLOOR
+  const grouped = {};
 
-  layouts[name] = JSON.parse(JSON.stringify(document._layout)); // ✅ deep copy
+  (document._layout || []).forEach(item=>{
+  const floor = item.floor || 1;
 
-  localStorage.setItem('layouts', JSON.stringify(layouts));
+  if(!grouped[floor]) grouped[floor] = [];
+    grouped[floor].push(item);
+  });
 
-  loadLayoutList();
+  // ✅ FIX: wrap inside floors
+  const payload = {
+    floors: grouped
+  };
 
-  alert('Layout saved!');
+  try {
+    const res = await fetch('/settings/table-layouts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+      },
+      body: JSON.stringify({
+        name: name,
+        data: payload
+      })
+    });
+
+    const result = await res.json();
+
+    if(result.success){
+      alert('Layout saved!');
+      loadLayoutList(); // reload dropdown
+    } else {
+      alert('Save failed');
+    }
+
+  } catch(err){
+    console.error(err);
+    alert('Error saving layout');
+  }
 });
 
 // LOAD
-loadLayoutBtn.addEventListener('click', () => {
-  const name = layoutList.value;
+loadLayoutBtn.addEventListener('click', async () => {
+  const id = layoutList.value;
+  if(!id) return;
 
-  if(!name) return;
+  try {
+    const res = await fetch(`/settings/table-layouts/${id}`);
+    const result = await res.json();
 
-  const layouts = JSON.parse(localStorage.getItem('layouts') || '{}');
-  const data = layouts[name];
+    if(!result.success) return;
 
-  if(!data) return;
+    const data = result.data;
+    const floorsData = data.floors || {};
 
-  // ✅ clear current floor only
-  document._layout = JSON.parse(JSON.stringify(data));
+    // ✅ RESET
+    document._layout = [];
+    floors = {};
 
-  canvas.innerHTML = '';
+    // ✅ rebuild floors + layout
+    Object.keys(floorsData).forEach(floorId => {
 
-  // 🔥 IMPORTANT: restore table counter
-  tableNumberCounter = 1;
+      floors[floorId] = {
+        id: Number(floorId),
+        name: 'Floor ' + floorId
+      };
 
-  document._layout.forEach(item => {
-    if(item.tableNo && item.tableNo >= tableNumberCounter){
-      tableNumberCounter = item.tableNo + 1;
-    }
+      floorsData[floorId].forEach(item => {
+        document._layout.push(item); // keep floor property
+      });
+    });
 
-    if(item.type === 'merged'){
-      canvas.appendChild(makeMergedElement(item));
-    } else {
-      canvas.appendChild(makePlacedElement(item));
-    }
-  });
+    // ✅ UI refresh
+    renderFloors();
 
-  clearSelection();
+    // 🔥 IMPORTANT: reset counter
+    tableNumberCounter = 1;
+
+    document._layout.forEach(item => {
+      if(item.tableNo && item.tableNo >= tableNumberCounter){
+        tableNumberCounter = item.tableNo + 1;
+      }
+    });
+
+    // ✅ render ONLY active floor
+    switchFloor(1);
+
+    clearSelection();
+
+  } catch(err){
+    console.error(err);
+    alert('Error loading layout');
+  }
 });
 
-function loadLayoutList(){
-  const layouts = JSON.parse(localStorage.getItem('layouts') || '{}');
+async function loadLayoutList(){
+  try {
+    const res = await fetch('/settings/table-layouts/list');
+    const result = await res.json();
 
-  layoutList.innerHTML = '';
+    layoutList.innerHTML = '';
 
-  Object.keys(layouts).forEach(name=>{
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    layoutList.appendChild(opt);
-  });
+    result.forEach(layout=>{
+      const opt = document.createElement('option');
+      opt.value = layout.id;
+      opt.textContent = layout.name;
+      layoutList.appendChild(opt);
+    });
+
+  } catch(err){
+    console.error(err);
+  }
 }
 
 // call it

@@ -610,6 +610,10 @@ mounted() {
     if (typeFromUrl) {
       this.orderType = typeFromUrl;
     }
+    const tableNoFromUrl = params.get('table_no');
+    if (tableNoFromUrl) {
+      this.tableNo = parseInt(tableNoFromUrl);
+    }
 
     if (this.isEdit && this.order) {
       this.orderNo = this.order.id;
