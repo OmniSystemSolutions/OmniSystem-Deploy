@@ -677,12 +677,10 @@ Route::prefix('workforce/leave-requests')->name('leave-requests.')->group(functi
 });
 
 Route::prefix('settings/table-layouts')->name('table-layouts.')->group(function () {
-    Route::get('/', [TableLayoutController::class, 'index'])->name('index');
-    // Route::get('/fetch', [LeaveRequestController::class, 'fetchLeaveRequests'])->name('fetch');
-    // Route::post('/', [LeaveRequestController::class, 'store'])->name('store');
-    // Route::put('/{id}/update-status', [LeaveRequestController::class, 'updateStatus']);
-    // Route::get('/{id}/edit', [LeaveRequestController::class, 'edit'])->name('leave-requests.edit');
-    // Route::put('/{id}', [LeaveRequestController::class, 'update'])->name('leave-requests.update');
+    Route::get('/', [TableLayoutController::class, 'index'])->name('index'); // view
+    Route::get('/list', [TableLayoutController::class, 'list'])->name('list'); // ✅ add this
+    Route::post('/', [TableLayoutController::class, 'store'])->name('store');
+    Route::get('/{id}', [TableLayoutController::class, 'show'])->name('show'); // ✅ change name → id
 });
 
 Route::prefix('settings/stations')->name('stations.')->group(function () {
