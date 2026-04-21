@@ -83,7 +83,361 @@ tr:hover {
   transform: translateY(-6px);
 }
 
+/* ── Kitchen Card Grid ── */
+.kitchen-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  padding: 8px 0 16px;
+}
 
+.k-card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.10);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e5e7eb;
+  transition: box-shadow 0.2s;
+}
+.k-card:hover {
+  box-shadow: 0 4px 18px rgba(0,0,0,0.15);
+}
+
+/* coloured top stripe — colour comes from inline style */
+.k-card__stripe {
+  height: 6px;
+  width: 100%;
+}
+
+.k-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px 4px;
+}
+
+.k-card__order {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1565c0;
+}
+
+.k-card__qty {
+  background: #1565c0;
+  color: #fff;
+  border-radius: 20px;
+  padding: 2px 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.k-card__name {
+  padding: 4px 14px 2px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.3;
+}
+
+.k-card__sku {
+  padding: 0 14px 8px;
+  font-size: 0.78rem;
+}
+
+.k-card__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 14px;
+  background: #f8f9fa;
+  border-top: 1px solid #f0f0f0;
+  font-size: 0.8rem;
+  gap: 6px;
+}
+
+.k-card__station {
+  color: #555;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.k-card__time {
+  white-space: nowrap;
+  font-size: 0.82rem;
+}
+
+.k-card__cook {
+  padding: 4px 14px;
+  font-size: 0.8rem;
+}
+
+/* ── Recipe chip block ── */
+.k-recipe {
+  padding: 8px 14px 10px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+.k-recipe__label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #999;
+  margin-bottom: 6px;
+}
+.k-recipe__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.k-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  overflow: hidden;
+  font-size: 0.75rem;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.k-chip__name {
+  background: #e8f0fe;
+  color: #1a56db;
+  font-weight: 600;
+  padding: 4px 8px 4px 10px;
+}
+.k-chip__qty {
+  background: #1a56db;
+  color: #fff;
+  font-weight: 700;
+  padding: 4px 9px 4px 7px;
+}
+
+.k-card__recipe-wrap {
+  padding: 0 14px 4px;
+}
+
+.k-card__actions {
+  padding: 0 14px 12px;
+}
+
+.k-card__item-count {
+  font-size: 0.75rem;
+  color: #9ca3af;
+  font-weight: 600;
+}
+
+/* ── Per-item rows inside a grouped card ── */
+.k-item {
+  padding: 10px 14px 6px;
+}
+.k-item--bordered {
+  border-top: 1px dashed #e5e7eb;
+}
+.k-item__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.k-item__left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.k-item__name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.k-item__qty {
+  background: #f3f4f6;
+  color: #374151;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.k-item__action { flex-shrink: 0; }
+.k-item__btn-update {
+  background: #ff630f;
+  color: #fff;
+  border: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.k-item__btn-update:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.15); }
+.k-item__btn-push {
+  background: #ff9800;
+  color: #fff;
+  border: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.k-item__btn-push:hover { background: #e65100; color: #fff; }
+.k-item__cook {
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.k-recipe--item {
+  padding: 5px 0 4px;
+  background: transparent;
+  border-top: none;
+}
+
+/* ── Update Status Modal ── */
+.um-modal { border: none; border-radius: 14px; overflow: hidden; }
+
+.um-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  background: linear-gradient(135deg, #1a56db 0%, #1e3a8a 100%);
+  padding: 20px 24px;
+  color: #fff;
+}
+.um-header__mode {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.75;
+  margin-bottom: 3px;
+}
+.um-header__order {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.um-header__order span { color: #93c5fd; }
+
+.um-info-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  background: #f0f4ff;
+  border-bottom: 1px solid #dde5f7;
+}
+.um-info-strip__item {
+  flex: 1 1 25%;
+  min-width: 140px;
+  padding: 12px 20px;
+  border-right: 1px solid #dde5f7;
+}
+.um-info-strip__item:last-child { border-right: none; }
+.um-info-strip__label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b7280;
+  margin-bottom: 4px;
+}
+.um-info-strip__value {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.um-field-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7280;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.um-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #374151;
+}
+.um-toggle-loss {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #1a56db;
+}
+.um-toggle-loss input { cursor: pointer; accent-color: #1a56db; }
+
+.um-ingredient-list {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.um-ingredient-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  background: #fff;
+  transition: background 0.15s;
+}
+.um-ingredient-row:last-child { border-bottom: none; }
+.um-ingredient-row:hover { background: #f9fafb; }
+.um-ingredient-row__info {
+  display: flex;
+  flex-direction: column;
+}
+.um-ingredient-row__name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #111827;
+}
+.um-ingredient-row__qty {
+  font-size: 0.78rem;
+  color: #6b7280;
+  margin-top: 1px;
+}
+.um-ingredient-row__loss {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.um-ingredient-row__loss .form-select,
+.um-ingredient-row__loss .form-control { width: auto; min-width: 100px; }
+.um-ingredient-row__unit {
+  font-size: 0.78rem;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.um-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
 
 </style>
 @section('content')
@@ -99,172 +453,114 @@ tr:hover {
       </div>
       <div class="separator-breadcrumb border-top"></div>
   </div>
-   <!-- ✅ Update Status Modal -->
-  <div class="modal fade" id="updateModal" tabindex="-1" aria-labelledby="updateStatusLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-      <div class="modal-content" v-if="selectedOrder">
+  <!-- Update Status Modal -->
+  <div class="modal fade" id="updateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content um-modal" v-if="selectedOrder">
 
         <!-- Header -->
-        <div class="modal-header">
-          <h5 class="modal-title">@{{ modalMode === 'push' ? 'Push Item' : 'Update Status' }}
-  - Order #@{{ selectedOrder.order_no }}</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal">x</button>
+        <div class="um-header">
+          <div>
+            <div class="um-header__mode">@{{ modalMode === 'push' ? 'Push Item' : 'Update Status' }}</div>
+            <div class="um-header__order">Order <span>#@{{ selectedOrder.order_no }}</span></div>
+          </div>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
 
         <!-- Body -->
-        <div class="modal-body">
+        <div class="modal-body p-0">
           <form @submit.prevent="submitUpdateStatus">
-            
-            <!-- Order Info -->
-            <div class="border rounded p-3 mb-3">
-              <div class="row g-2">
-                <div class="col-md-3">
-                  <label class="form-label">Order No</label>
-                  <template v-if="modalMode === 'push'">
-                  <!-- Push Mode -->
-                  <v-select
-                    
-                    :options="availableOrders"
-                    label="order_no"
-                    :reduce="o => o.id"
-                    v-model="selectedOrder.new_order_id"
-                    placeholder="Select Order"
-                    :clearable="false"
-                  />
-                  </template>
-                  <template v-else>
-                  <!-- Update Mode -->
-                  <input
-                    type="text"
-                    class="form-control"
-                    :value="selectedOrder.order_no"
-                    readonly
-                  >
-                  </template>
-                </div>
 
-                <div class="col-md-3">
-                  <label class="form-label">Time Ordered</label>
-                  <input type="text" class="form-control" :value="formatTime(selectedOrder.time_submitted)" readonly>
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">SKU</label>
-                  <input type="text" class="form-control" v-model="selectedOrder.code" readonly>
-                </div>
-                <div class="col-md-3">
-                  <label class="form-label">Product Name</label>
-                  <input type="text" class="form-control" v-model="selectedOrder.name" readonly>
+            <!-- Order Info strip -->
+            <div class="um-info-strip">
+              <div class="um-info-strip__item">
+                <div class="um-info-strip__label">Order No</div>
+                <template v-if="modalMode === 'push'">
+                  <v-select :options="availableOrders" label="order_no" :reduce="o => o.id"
+                    v-model="selectedOrder.new_order_id" placeholder="Select Order" :clearable="false" />
+                </template>
+                <template v-else>
+                  <div class="um-info-strip__value">#@{{ selectedOrder.order_no }}</div>
+                </template>
+              </div>
+              <div class="um-info-strip__item">
+                <div class="um-info-strip__label">Product</div>
+                <div class="um-info-strip__value">@{{ selectedOrder.name }}</div>
+              </div>
+              <div class="um-info-strip__item">
+                <div class="um-info-strip__label">Time Ordered</div>
+                <div class="um-info-strip__value">@{{ formatTime(selectedOrder.time_submitted) }}</div>
+              </div>
+              <div class="um-info-strip__item">
+                <div class="um-info-strip__label">Station</div>
+                <div class="um-info-strip__value">@{{ selectedOrder.station }}</div>
+              </div>
+            </div>
+
+            <!-- Fields -->
+            <div class="row g-3 px-4 pt-4 pb-3">
+              <div class="col-md-6">
+                <label class="um-field-label">Chef / Cook</label>
+                <v-select :options="chefs" label="name" :reduce="chef => chef.id"
+                  v-model="selectedOrder.cook_id" placeholder="-- Select Cook --" :clearable="true" />
+              </div>
+              <div class="col-md-6">
+                <label class="um-field-label">Status</label>
+                <input v-if="modalMode === 'push'" type="text" class="form-control" value="Served" readonly>
+                <v-select v-else
+                  :options="[{label:'Served',value:'served'},{label:'Walked',value:'walked'},{label:'Cancelled',value:'cancelled'}]"
+                  label="label" :reduce="s => s.value" v-model="selectedOrder.status"
+                  placeholder="Select Status" :clearable="false" />
+              </div>
+            </div>
+
+            <!-- Ingredients section -->
+            <div v-if="selectedOrder && modalMode !== 'push'" class="px-4 pb-4">
+
+              <div class="um-section-head">
+                <span>Ingredients</span>
+                <label class="um-toggle-loss">
+                  <input type="checkbox" v-model="selectedOrder.showLoss">
+                  <span class="um-toggle-loss__text">Log Wastage</span>
+                </label>
+              </div>
+
+              <!-- ingredient rows -->
+              <div class="um-ingredient-list">
+                <div v-if="!selectedOrder.recipe || selectedOrder.recipe.length === 0"
+                  class="text-center text-muted py-3" style="font-size:0.9rem;">No ingredients found.</div>
+
+                <div v-for="(ingredient, index) in selectedOrder.recipe" :key="index"
+                  class="um-ingredient-row" :class="{ 'um-ingredient-row--loss': selectedOrder.showLoss }">
+
+                  <!-- left: name + base qty -->
+                  <div class="um-ingredient-row__info">
+                    <span class="um-ingredient-row__name">@{{ ingredient.component_name }}</span>
+                    <span class="um-ingredient-row__qty">@{{ ingredient.quantity }} @{{ ingredient.unit }}</span>
+                  </div>
+
+                  <!-- right: loss fields (only when toggled) -->
+                  <template v-if="selectedOrder.showLoss">
+                    <div class="um-ingredient-row__loss">
+                      <select v-model="ingredient.loss_type" class="form-select form-select-sm">
+                        <option disabled value="">Loss Type</option>
+                        <option value="wastage">Wastage</option>
+                        <option value="spoilage">Spoilage</option>
+                        <option value="theft">Theft</option>
+                      </select>
+                      <input type="number" v-model.number="ingredient.loss_qty" step="0.01" min="0"
+                        class="form-control form-control-sm" placeholder="Qty">
+                      <span class="um-ingredient-row__unit">@{{ ingredient.unit }}</span>
+                    </div>
+                  </template>
                 </div>
               </div>
             </div>
-            <div class="row">
-              <div class="col-md-4">
-                <label class="form-label">Chef / Cook</label>
 
-                <v-select
-                  :options="chefs"
-                  label="name"
-                  :reduce="chef => chef.id"
-                  v-model="selectedOrder.cook_id"
-                  placeholder="-- Select Cook --"
-                  :clearable="true"
-                />
-              </div>
-
-
-              <div class="col-md-4">
-  <label class="form-label">Status</label>
-
-  <!-- Push Mode -->
-  <input
-    v-if="modalMode === 'push'"
-    type="text"
-    class="form-control"
-    value="Served"
-    readonly
-  >
-
-  <!-- Update Mode -->
-  <v-select
-    v-else
-    :options="[
-      { label: 'Served', value: 'served' },
-      { label: 'Walked', value: 'walked' },
-      { label: 'Cancelled', value: 'cancelled' }
-    ]"
-    label="label"
-    :reduce="s => s.value"
-    v-model="selectedOrder.status"
-    placeholder="Select Status"
-    :clearable="false"
-  />
-</div>
-
-
-              <div class="col-md-4">
-                <label class="form-label">Station</label>
-                <input type="text" class="form-control" v-model="selectedOrder.station" readonly>
-              </div>
-
-              </div>
-
-              <div v-if="selectedOrder && modalMode !== 'push'" class="mt-3">
-              <h5>Ingredients for @{{ selectedOrder.name }}</h5>
-
-              <div class="mb-2">
-                <input type="checkbox" v-model="selectedOrder.showLoss"> Wasted Ingredients
-              </div>
-
-              <table class="table table-bordered">
-                <thead>
-                  <tr>
-                    <th>Component</th>
-                    <th>Quantity</th>
-                    <th v-if="selectedOrder.showLoss" colspan="3" class="text-center">Inventory Loss</th>
-                  </tr>
-                  <tr v-if="selectedOrder.showLoss">
-                    <th></th>
-                    <th></th>
-                    <th>Type</th>
-                    <th>Qty</th>
-                    <th>Unit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="(ingredient, index) in selectedOrder.recipe" :key="index">
-                    <td>@{{ ingredient.component_name }}</td>
-                    <td class="text-end">@{{ ingredient.quantity }}</td>
-
-                    <template v-if="selectedOrder.showLoss">
-                      <td>
-                        <select v-model="ingredient.loss_type" class="form-control">
-                          <option disabled value="" style="color: #aaa;">Select Type</option>
-                          <option value="wastage">Wastage</option>
-                          <option value="spoilage">Spoilage</option>
-                          <option value="theft">Theft</option>
-                        </select>
-                      </td>
-                      <td>
-                        <input type="number" v-model.number="ingredient.loss_qty" step="0.01" class="form-control text-end">
-                      </td>
-                      <td>@{{ ingredient.unit }}</td>
-                    </template>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-              
-            {{-- </div> --}}
-            <br>
-            <!-- Buttons -->
-            <div class="text-center">
-              <button type="submit" class="btn btn-primary px-4 me-2">
-                <i class="bi bi-check-circle me-1"></i> Submit
-              </button>
-              <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">
-                Cancel
-              </button>
+            <!-- Footer buttons -->
+            <div class="um-footer">
+              <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-primary px-5">Submit</button>
             </div>
           </form>
         </div>
@@ -316,7 +612,7 @@ tr:hover {
 
     <div class="wrapper">
         <div class="card mt-4">
-            <nav class="card-header">
+            <nav class="card-header d-flex align-items-center justify-content-between">
                 <ul class="nav nav-tabs card-header-tabs">
                   <li class="nav-item" v-for="status in statusList" :key="status.value">
                       <a href="#"
@@ -327,6 +623,24 @@ tr:hover {
                       </a>
                   </li>
                 </ul>
+                <div class="btn-group ms-auto" style="flex-shrink:0;">
+                  <button type="button"
+                    class="btn btn-sm"
+                    :class="viewMode === 'table' ? 'btn-primary' : 'btn-outline-secondary'"
+                    @click="viewMode = 'table'"
+                    title="Table view">
+                    <i class="i-Table2"></i>
+                    Default
+                  </button>
+                  <button type="button"
+                    class="btn btn-sm"
+                    :class="viewMode === 'card' ? 'btn-primary' : 'btn-outline-secondary'"
+                    @click="viewMode = 'card'"
+                    title="Card view">
+                    <i class="i-Postcard"></i>
+                      Card
+                  </button>
+                </div>
             </nav>
 
             <div class="row" v-if="statusFilter === 'serving'">
@@ -359,8 +673,82 @@ tr:hover {
 
 
             <div class="card-body">
-                <div class="vgt-wrap ">
-                  
+
+                {{-- ── GROUPED CARD VIEW ── --}}
+                <div v-if="viewMode === 'card'" class="kitchen-cards">
+                  <p v-if="groupedOrders.length === 0" class="text-center text-muted py-4">No data available.</p>
+
+                  <div v-for="group in groupedOrders" :key="group.order_no" class="k-card">
+
+                    {{-- Stripe --}}
+                    <div class="k-card__stripe" :style="{ background: stripeColor(group.created_at) }"></div>
+
+                    {{-- Card header: Order # + timer --}}
+                    <div class="k-card__head">
+                      <span class="k-card__order">#@{{ group.order_no }}</span>
+                      <span class="k-card__time fw-bold"
+                        :class="{ 'text-danger': (new Date(now) - new Date(group.created_at)) / 60000 >= 15 }">
+                        <i class="i-Clock me-1"></i>
+                        @{{ group.items[0].status === 'serving' ? getRunningTime(group.created_at) : formatAMPM(group.created_at) }}
+                      </span>
+                    </div>
+
+                    {{-- Divider --}}
+                    <div style="height:1px;background:#f0f0f0;margin:0 14px;"></div>
+
+                    {{-- Item rows --}}
+                    <div v-for="(item, idx) in group.items" :key="item.order_detail_id"
+                      class="k-item" :class="{ 'k-item--bordered': idx > 0 }">
+
+                      {{-- Item name + qty + action button --}}
+                      <div class="k-item__top">
+                        <div class="k-item__left">
+                          <span class="k-item__name">@{{ item.name }}</span>
+                          <span class="k-item__qty">×@{{ item.qty }}</span>
+                        </div>
+                        <div class="k-item__action">
+                          <button v-if="statusFilter === 'serving'"
+                            class="btn btn-sm k-item__btn-update"
+                            @click="openUpdateModal(item)">
+                            Update
+                          </button>
+                          <button v-if="statusFilter === 'walked'"
+                            class="btn btn-sm k-item__btn-push"
+                            @click="pushItem(item)">
+                            Push
+                          </button>
+                          <span v-if="statusFilter !== 'serving' && statusFilter !== 'walked'"
+                            class="k-item__cook text-muted">
+                            @{{ item.cook_name || '—' }}
+                          </span>
+                        </div>
+                      </div>
+
+                      {{-- Recipe chips --}}
+                      <div v-if="item.recipe && item.recipe.length" class="k-recipe k-recipe--item">
+                        <div class="k-recipe__chips">
+                          <span v-for="r in item.recipe" :key="r.component_id || r.component_name" class="k-chip">
+                            <span class="k-chip__name">@{{ r.component_name }}</span>
+                            <span class="k-chip__qty">@{{ r.quantity }}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {{-- Card footer: station --}}
+                    <div class="k-card__meta">
+                      <span class="k-card__station">
+                        <i class="i-Tag me-1"></i>@{{ group.items[0].station }}
+                      </span>
+                      <span class="k-card__item-count">@{{ group.items.length }} item@{{ group.items.length > 1 ? 's' : '' }}</span>
+                    </div>
+
+                  </div>
+                </div>
+
+                {{-- ── TABLE VIEW ── --}}
+                <div class="vgt-wrap" v-if="viewMode === 'table'">
+
 
                 <div class="vgt-inner-wrap">
                     <div class="vgt-fixed-header">
@@ -572,6 +960,7 @@ tr:hover {
                         </table>
                     </div>
                 </div>
+                </div>{{-- end v-if table --}}
             </div>
         </div>
     </div>
@@ -582,6 +971,7 @@ new Vue({
   el: "#app",
   data: {
     now: new Date(), // reactive timestamp that updates every second
+    viewMode: 'table', // 'table' | 'card'
     selectedOrder: null,
     modalMode: null,
     orderItems: [],
@@ -652,19 +1042,9 @@ new Vue({
 
     // 🔹 Filtered + Sorted orders based on selected date
 filteredOrders() {
-  // Step 1: Filter by selected date
-  let data = this.orderItems.filter(item => {
-    
-    const date = new Date(item.created_at);
-    return (
-      date.getFullYear() === this.selectedYear &&
-      date.getMonth() + 1 === this.selectedMonth &&
-      date.getDate() === this.selectedDay
-    );
-     console.log('return', date)
-  });
+  // Backend already filters by date; just sort here
+  let data = [...this.orderItems];
 
-  // Step 2: Sort if a column is selected
   if (this.sortKey) {
   data = [...data].sort((a, b) => {
     let valA = a[this.sortKey];
@@ -698,7 +1078,19 @@ filteredOrders() {
 
 
   return data;
-}
+},
+
+groupedOrders() {
+  const map = {};
+  this.filteredOrders.forEach(item => {
+    const key = item.order_no;
+    if (!map[key]) {
+      map[key] = { order_no: key, created_at: item.created_at, items: [] };
+    }
+    map[key].items.push(item);
+  });
+  return Object.values(map).sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+},
 
   },
 
@@ -812,11 +1204,18 @@ setStatus(status) {
     // 🟩🟧🟥 Compute background color based on elapsed time
     getOrderColor(submitted) {
       const diffInMinutes = (new Date(this.now) - new Date(submitted)) / 1000 / 60;
+      if (diffInMinutes >= 15) return '#ffcccc';
+      if (diffInMinutes >= 10) return '#ffe5b4';
+      if (diffInMinutes >= 5)  return '#e8f5e9';
+      return '#ffffff';
+    },
 
-      if (diffInMinutes >= 15) return '#ffcccc'; // red
-      if (diffInMinutes >= 10) return '#ffe5b4'; // orange
-      if (diffInMinutes >= 5)  return '#e8f5e9'; // green
-      return '#ffffff'; // default white
+    stripeColor(submitted) {
+      const diffInMinutes = (new Date(this.now) - new Date(submitted)) / 1000 / 60;
+      if (diffInMinutes >= 15) return '#f44336';
+      if (diffInMinutes >= 10) return '#ff9800';
+      if (diffInMinutes >= 5)  return '#4caf50';
+      return '#90a4ae';
     },
 
     formatTime(datetime) {
