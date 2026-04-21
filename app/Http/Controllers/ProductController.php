@@ -407,7 +407,7 @@ class ProductController extends Controller
 
     // 2️⃣ Create/get subcategory
     $subcategory = !empty($row['subcategory']['name']) && $category
-        ? SubCategory::firstOrCreate(
+        ? Subcategory::firstOrCreate(
             ['name' => $row['subcategory']['name'], 'category_id' => $category->id],
             ['status' => 'active']
           )
