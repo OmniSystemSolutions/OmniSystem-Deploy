@@ -646,7 +646,8 @@ Route::prefix('daily-time-records')->name('dtr.')->group(function () {
 Route::prefix('inventory/transfer')->name('transfers.')->group(function () {
     Route::get('/', [InventoryTransferController::class, 'index'])->name('index');
     Route::get('/fetch', [InventoryTransferController::class, 'fetchTransfers'])->name('fetch');
-    
+    Route::get('/items/fetch', [InventoryTransferController::class, 'fetchItems'])->name('items.fetch');
+
     Route::get('/create', [InventoryTransferController::class, 'create'])->name('create');
     Route::get('/create/request', fn () => redirect()->route('transfers.create', ['transfer_type' => 'request']));
     Route::get('/create/send', fn () => redirect()->route('transfers.create', ['transfer_type' => 'send']));
@@ -663,6 +664,8 @@ Route::prefix('inventory/transfer')->name('transfers.')->group(function () {
     Route::get('/{id}/send-out', [InventoryTransferController::class, 'sendOutForm'])->name('sendOutForm');
     Route::post('/{id}/send', [InventoryTransferController::class, 'storeSendOut']);
     Route::post('/{id}/receive', [InventoryTransferController::class, 'receiveTransfer']);
+    Route::get('/{id}/pending-send-outs', [InventoryTransferController::class, 'getPendingSendOuts']);
+    Route::post('/send-out/{sendOutId}/receive', [InventoryTransferController::class, 'receiveSendOut']);
     
     Route::delete('/{id}', [InventoryTransferController::class, 'destroy']);
 });

@@ -395,20 +395,23 @@ if (!hasAtLeastOnePositiveQty) {
                   this.transfer.destination_branch?.name ?? '';
                this.items = (this.transfer.items || []).map(item => {
                   const isProduct = !!item.product_id;
-                  const source = isProduct ? item.product : item.component;
-   
+                  const source     = isProduct ? item.product : item.component;
+                  const branchStock = source?.branch_stock_for_current;
+
                   return {
                      id: item.id,
                      _type: isProduct ? 'product' : 'component',
-   
-                     name: source?.name ?? 'N/A',
-                     code: source?.sku || source?.code || 'N/A',
+
+                     name:     source?.name ?? 'N/A',
+                     code:     source?.code  ?? 'N/A',
                      category: source?.category ?? null,
-                     unit: source?.unit ?? 'N/A',
-                     onhand: source?.onhand ?? 0,
-   
+                     unit:     source?.unit?.name ?? 'N/A',
+                     onhand:   isProduct
+                                 ? (branchStock?.quantity ?? 0)
+                                 : (branchStock?.onhand   ?? 0),
+
                      requested_quantity: item.quantity_requested,
-                     sent_quantity: item.quantity_sent,
+                     sent_quantity:      item.quantity_sent,
                   };
                });
                this.items.forEach(item => {

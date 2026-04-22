@@ -129,4 +129,9 @@ public function archivedBy() {
     return $this->belongsTo(User::class, 'archived_by');
 }
 
+public function sendOuts()
+{
+    return $this->hasMany(InventoryTransferSendOut::class, 'inventory_transfer_id');
+}
+
 }

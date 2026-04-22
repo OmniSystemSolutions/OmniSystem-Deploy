@@ -132,7 +132,7 @@
                                  @{{ displayStatus(row) }}
                               </td>
                               <td class="vgt-left-align text-right">
-                                 <actions-dropdown :row="row" 
+                                 <actions-dropdown :row="row"
                                  @view-invoice="viewInvoice"
                                  @edit-transfer="editTransfer"
                                  @add-view-attached-files="addViewAttachedFiles"
@@ -141,6 +141,7 @@
                                  @archive-transfer="archiveTransfer"
                                  @restore-transfer="restoreTransfer"
                                  @delete-transfer="deleteTransfer"
+                                 @open-receive-modal="openReceiveModal"
                                  ></actions-dropdown>
                               </td>
                            </tr>
@@ -195,7 +196,72 @@
          </div>
       </div>
    </div>
+
+   <!-- Receive Delivery Modal (inside #app so Vue bindings work) -->
+   <div class="modal fade" id="receiveDeliveryModal" tabindex="-1" role="dialog" aria-labelledby="receiveDeliveryModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-lg" role="document">
+         <div class="modal-content">
+            <div class="modal-header">
+               <h5 class="modal-title" id="receiveDeliveryModalLabel">Receive Delivery</h5>
+               <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+               </button>
+            </div>
+            <div class="modal-body">
+               <div v-if="loadingSendOuts" class="text-center py-4">
+                  <span>Loading deliveries...</span>
+               </div>
+               <div v-else-if="pendingSendOuts.length === 0" class="text-center text-muted py-4">
+                  No pending deliveries to receive.
+               </div>
+               <div v-else>
+                  <p class="text-muted mb-3">Select a delivery to accept and add stocks to your inventory.</p>
+                  <div v-for="so in pendingSendOuts" :key="so.id" class="card mb-3">
+                     <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                           <strong>DR #:</strong> @{{ so.delivery_request_no }}<br>
+                           <small class="text-muted">Personnel: @{{ so.personel_name }} &nbsp;|&nbsp; Sent: @{{ so.created_at }}</small>
+                        </div>
+                        <button
+                           class="btn btn-success btn-sm"
+                           :disabled="receivingId === so.id"
+                           @click="acceptDelivery(so.id)"
+                        >
+                           <span v-if="receivingId === so.id">Receiving...</span>
+                           <span v-else><i class="i-Yes mr-1"></i> Accept</span>
+                        </button>
+                     </div>
+                     <div class="card-body p-0">
+                        <table class="table table-sm mb-0">
+                           <thead class="thead-light">
+                              <tr>
+                                 <th>Name</th>
+                                 <th>Code</th>
+                                 <th>Type</th>
+                                 <th class="text-right">Quantity</th>
+                              </tr>
+                           </thead>
+                           <tbody>
+                              <tr v-for="(item, idx) in so.items" :key="idx">
+                                 <td>@{{ item.name }}</td>
+                                 <td>@{{ item.code }}</td>
+                                 <td>@{{ item.type }}</td>
+                                 <td class="text-right">@{{ item.quantity }}</td>
+                              </tr>
+                           </tbody>
+                        </table>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <div class="modal-footer">
+               <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+         </div>
+      </div>
+   </div>
 </div>
+
 <script type="text/x-template" id="actions-dropdown-template">
    <div class="dropdown btn-group" ref="dropdown">
        <button type="button" class="btn dropdown-toggle btn-link btn-lg text-decoration-none dropdown-toggle-no-caret"
@@ -273,14 +339,14 @@
            </li>
            
            <!-- Add Stocks -->
-           <li v-if="row.can_add_stocks && !row.is_received">
+           <li v-if="row.can_add_stocks && row.pending_send_outs_count > 0">
                <a
                    href="#"
                    class="dropdown-item"
-                   @click.prevent="addStocks(row)"
+                   @click.prevent="$emit('open-receive-modal', row)"
                >
                    <i class="nav-icon i-Receipt font-weight-bold mr-2"></i>
-                   Add Stocks to Inventory
+                   Receive Delivery
                </a>
            </li>
    
@@ -429,39 +495,6 @@
            }
        });
    },
-   async addStocks(row) {
-           const confirmed = await Swal.fire({
-               title: 'Add stocks to inventory?',
-               text: 'This will increase on-hand quantities for this branch.',
-               icon: 'warning',
-               showCancelButton: true,
-               confirmButtonText: 'Yes, add stocks',
-               cancelButtonText: 'Cancel',
-           });
-   
-           if (!confirmed.isConfirmed) return;
-   
-           try {
-               await axios.post(`/inventory/transfer/${row.id}/receive`);
-   
-               Swal.fire({
-                   icon: 'success',
-                   title: 'Success',
-                   text: 'Stocks successfully added to inventory.',
-               });
-   
-           } catch (error) {
-       console.error('FULL ERROR:', error);
-   
-       Swal.fire({
-           icon: 'error',
-           title: 'Error',
-           text: error.message || 'Something went wrong',
-       });
-   }
-       }
-   
-   
        },
        mounted() {
            document.addEventListener("click", this.handleClickOutside);
@@ -510,6 +543,10 @@
                 disapproved: 'disapproved_by_name',
                 archived: 'archived_by_name',
             },
+            pendingSendOuts: [],
+            loadingSendOuts: false,
+            receivingId: null,
+            currentReceiveTransferId: null,
            }
        },
        mounted() {
@@ -592,8 +629,44 @@
            }
    
            return 'badge badge-secondary';
-       }
        },
+       async openReceiveModal(row) {
+           this.pendingSendOuts = [];
+           this.receivingId = null;
+           this.currentReceiveTransferId = row.id;
+           this.loadingSendOuts = true;
+           $('#receiveDeliveryModal').modal('show');
+
+           try {
+               const res = await axios.get(`/inventory/transfer/${row.id}/pending-send-outs`);
+               this.pendingSendOuts = res.data.send_outs;
+           } catch (error) {
+               console.error(error);
+               Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to load deliveries.' });
+               $('#receiveDeliveryModal').modal('hide');
+           } finally {
+               this.loadingSendOuts = false;
+           }
+       },
+       async acceptDelivery(sendOutId) {
+           this.receivingId = sendOutId;
+           try {
+               await axios.post(`/inventory/transfer/send-out/${sendOutId}/receive`);
+               this.pendingSendOuts = this.pendingSendOuts.filter(s => s.id !== sendOutId);
+               Swal.fire({ icon: 'success', title: 'Received!', text: 'Delivery accepted and stocks added to inventory.' });
+               if (this.pendingSendOuts.length === 0) {
+                   $('#receiveDeliveryModal').modal('hide');
+                   this.fetchRecords(this.pagination.current_page);
+               }
+           } catch (error) {
+               console.error(error);
+               const msg = error.response?.data?.message || 'Something went wrong.';
+               Swal.fire({ icon: 'error', title: 'Error', text: msg });
+           } finally {
+               this.receivingId = null;
+           }
+       },
+   },
    });
 </script>
 @endsection
