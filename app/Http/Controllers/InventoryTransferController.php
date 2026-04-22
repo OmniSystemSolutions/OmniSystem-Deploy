@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Branch;
+use App\Models\BranchComponent;
+use App\Models\BranchProduct;
 use App\Models\InventoryTransfer;
 use App\Models\InventoryTransferItem;
 use App\Models\InventoryTransferSendOut;
-use App\Models\BranchComponent;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +32,8 @@ class InventoryTransferController extends Controller
     'completedBy',
     'disapprovedBy',
     'archivedBy',
-    'items'
+    'items',
+    'sendOuts',
 ]);
 
 // ✅ Branch visibility filter
@@ -129,6 +131,9 @@ class InventoryTransferController extends Controller
     'can_add_stocks' => $canAddStocks,
     'can_send_stocks' => $canSendStocks,
     'can_send_additional_stocks' => $canSendAdditionalStocks,
+    'pending_send_outs_count' => $canAddStocks
+        ? $transfer->sendOuts->whereNull('received_by')->count()
+        : 0,
 ];
 });
 
@@ -138,6 +143,41 @@ class InventoryTransferController extends Controller
         return response()->json($transfers);
     }
 
+
+    public function fetchItems(Request $request)
+    {
+        $type     = strtolower($request->input('type', 'components'));
+        $branchId = current_branch_id();
+
+        if ($type === 'products') {
+            $items = BranchProduct::with(['product.category:id,name', 'unit:id,name'])
+                ->where('branch_id', $branchId)
+                ->where('type', 'simple')
+                ->get()
+                ->map(fn ($bp) => [
+                    'id'       => $bp->product_id,
+                    'code'     => $bp->product?->code,
+                    'name'     => $bp->product?->name,
+                    'category' => $bp->product?->category,
+                    'unit'     => $bp->unit?->name,
+                    'onhand'   => $bp->quantity,
+                ]);
+        } else {
+            $items = BranchComponent::with(['component.category:id,name', 'component.unit:id,name'])
+                ->where('branch_id', $branchId)
+                ->get()
+                ->map(fn ($bc) => [
+                    'id'       => $bc->component_id,
+                    'code'     => $bc->component?->code,
+                    'name'     => $bc->component?->name,
+                    'category' => $bc->component?->category,
+                    'unit'     => $bc->component?->unit?->name,
+                    'onhand'   => $bc->onhand,
+                ]);
+        }
+
+        return response()->json(['items' => $items]);
+    }
 
     public function create(Request $request)
     {
@@ -153,11 +193,7 @@ class InventoryTransferController extends Controller
         $currentBranchId = current_branch_id();
 
 
-        // Get next AUTO_INCREMENT value
-        $nextId = DB::table('information_schema.TABLES')
-            ->where('TABLE_SCHEMA', DB::getDatabaseName())
-            ->where('TABLE_NAME', 'inventory_transfers')
-            ->value('AUTO_INCREMENT');
+        $nextId = (InventoryTransfer::max('id') ?? 0) + 1;
 
         // ✅ Reference prefix logic
         $prefix = $transferType === 'send' ? 'TSO' : 'TR';
@@ -441,19 +477,20 @@ class InventoryTransferController extends Controller
 public function sendOutForm($id)
 {
    $transfer = InventoryTransfer::with([
-            'items.product.category',
-            'items.component.category',
-        ])->findOrFail($id);
+        'items.product.category',
+        'items.product.unit',
+        'items.product.branchStockForCurrent',
+        'items.component.category',
+        'items.component.unit',
+        'items.component.branchStockForCurrent',
+        'destinationBranch',
+    ])->findOrFail($id);
 
     // ✅ ACTIVE branch (from header / session)
         $currentBranchId = current_branch_id();
 
 
-        // Get next AUTO_INCREMENT value
-        $nextId = DB::table('information_schema.TABLES')
-            ->where('TABLE_SCHEMA', DB::getDatabaseName())
-            ->where('TABLE_NAME', 'inventory_transfer_send_outs')
-            ->value('AUTO_INCREMENT');
+        $nextId = (DB::table('inventory_transfer_send_outs')->max('id') ?? 0) + 1;
 
         $delivery_no = sprintf(
             '%s-%02d-%05d',
@@ -677,5 +714,116 @@ public function receiveTransfer($id)
     ]);
 }
 
+public function getPendingSendOuts($id)
+{
+    $transfer = InventoryTransfer::with([
+        'items.product',
+        'items.component',
+    ])->findOrFail($id);
+
+    if (
+        $transfer->status !== 'in_transit'
+        || (int) $transfer->destination_id !== (int) current_branch_id()
+    ) {
+        abort(403, 'Cannot view send-outs for this transfer.');
+    }
+
+    $itemMap = $transfer->items->keyBy('id');
+
+    $sendOuts = InventoryTransferSendOut::where('inventory_transfer_id', $id)
+        ->whereNull('received_by')
+        ->orderBy('created_at')
+        ->get()
+        ->map(function ($so) use ($itemMap) {
+            $items = collect($so->items_onload ?? [])->map(function ($entry) use ($itemMap) {
+                $transferItem = $itemMap->get($entry['inventory_transfer_item_id'] ?? null);
+                $isProduct = $transferItem && $transferItem->product_id;
+                $source = $isProduct ? $transferItem->product : $transferItem?->component;
+                return [
+                    'type'     => $entry['type'] ?? ($isProduct ? 'product' : 'component'),
+                    'name'     => $source?->name ?? 'N/A',
+                    'code'     => $source?->code ?? 'N/A',
+                    'quantity' => $entry['quantity'] ?? 0,
+                ];
+            })->filter(fn($i) => bccomp((string)$i['quantity'], '0', 2) > 0)->values();
+
+            return [
+                'id'                  => $so->id,
+                'delivery_request_no' => $so->delivery_request_no,
+                'personel_name'       => $so->personel_name,
+                'created_at'          => optional($so->created_at)->format('Y-m-d H:i:s'),
+                'items'               => $items,
+            ];
+        });
+
+    return response()->json(['send_outs' => $sendOuts]);
+}
+
+public function receiveSendOut($sendOutId)
+{
+    $result = DB::transaction(function () use ($sendOutId) {
+
+        $sendOut = InventoryTransferSendOut::with('transfer.items')
+            ->lockForUpdate()
+            ->findOrFail($sendOutId);
+
+        if (!is_null($sendOut->received_by)) {
+            abort(422, 'This delivery has already been received.');
+        }
+
+        $transfer = $sendOut->transfer;
+
+        if (
+            $transfer->status !== 'in_transit'
+            || (int) $transfer->destination_id !== (int) current_branch_id()
+        ) {
+            abort(403, 'Cannot receive this delivery.');
+        }
+
+        $itemMap = $transfer->items->keyBy('id');
+
+        foreach ($sendOut->items_onload ?? [] as $entry) {
+            $qty = number_format((float) ($entry['quantity'] ?? 0), 2, '.', '');
+            if (bccomp($qty, '0', 2) <= 0) continue;
+
+            $transferItem = $itemMap->get($entry['inventory_transfer_item_id'] ?? null);
+            if (!$transferItem) continue;
+
+            if ($transferItem->product_id) {
+                $branchProduct = BranchProduct::firstOrCreate(
+                    ['branch_id' => $transfer->destination_id, 'product_id' => $transferItem->product_id],
+                    ['quantity' => '0.00', 'price' => '0.00', 'type' => 'simple']
+                );
+                $branchProduct->quantity = bcadd(
+                    number_format((float) $branchProduct->quantity, 2, '.', ''),
+                    $qty, 2
+                );
+                $branchProduct->save();
+            } elseif ($transferItem->component_id) {
+                $branchComponent = BranchComponent::firstOrCreate(
+                    ['branch_id' => $transfer->destination_id, 'component_id' => $transferItem->component_id],
+                    ['onhand' => '0.00']
+                );
+                $branchComponent->onhand = bcadd(
+                    number_format((float) $branchComponent->onhand, 2, '.', ''),
+                    $qty, 2
+                );
+                $branchComponent->save();
+            }
+        }
+
+        $sendOut->update([
+            'received_by'       => auth()->id(),
+            'received_datetime' => now(),
+        ]);
+
+        return $sendOut;
+    });
+
+    return response()->json([
+        'message'     => 'Delivery received successfully.',
+        'send_out_id' => $result->id,
+    ]);
+}
 
 }

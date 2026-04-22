@@ -289,7 +289,7 @@
                 this.selectedBranch = this.branchesOptions[0];
             }
         });
-        console.log('Requested datetime:', this.transfer.requested_datetime);
+        console.log('Requested datetime:', this.transfer?.requested_datetime ?? null);
 
     },
 
@@ -457,7 +457,7 @@
             
             
             try {
-                const response = await axios.get('/inventory/items/fetch', {
+                const response = await axios.get('/inventory/transfer/items/fetch', {
                     params: { type }
                 });
             
@@ -585,6 +585,10 @@
 
     },
        watch: {
+    selectedType(newVal) {
+        if (newVal) this.loadItems();
+    },
+
     branchesOptions: {
         immediate: true,
         handler(newOptions) {
