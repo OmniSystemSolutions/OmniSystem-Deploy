@@ -116,7 +116,7 @@
                     <tbody>
                         @forelse($purchaseOrders as $po)
                             <tr>
-                                <td>{{ $po->created_at->format('Y-m-d H:i') }}</td>
+                                <td>{{ $po->created_at?->format('Y-m-d H:i') ?? '—' }}</td>
                                 <td>{{ $po->po_number }}</td>
                                 <td>{{ $po->user?->name ?? '—' }}</td>
                                 <td>{{ $po->department ?? '—' }}</td>
@@ -138,9 +138,7 @@
                                 <td>
                                     {{ $po->approvedBy?->name ?? 'NA' }}
                                 </td>
-                                <td>
-                                    {{ $po->approved_at ? \Carbon\Carbon::parse($po->approved_at)->format('Y-m-d H:i A') : '' }}
-                                </td>
+                                <td>{{ $po->approved_at ? \Carbon\Carbon::parse($po->approved_at)->format('Y-m-d H:i') : '—' }}</td>
                             @endif
                                 
                                 
@@ -818,84 +816,6 @@ function openViewAttachmentsModal(poId) {
 
     // Use Laravel-generated URL (route uses underscore) so path includes any base folder
     fetch("{{ url('inventory_purchase_orders') }}" + '/' + poId + '/attachments')
-        .then(response => response.json())
-        .then(data => {
-            if (!data.attachments || data.attachments.length === 0) {
-                container.innerHTML = `<p class="text-muted mb-0">No attachments found.</p>`;
-                return;
-            }
-
-            let html = '<div class="list-group">';
-            data.attachments.forEach(file => {
-                const filename = file.split('/').pop();
-                html += `
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center">
-                            <i class="i-File-PDF text-danger me-2" style="font-size: 1.4rem;"></i>
-                            <span>${filename}</span>
-                        </div>
-                        <div>
-                            <a href="/storage/${file}" target="_blank" class="text-decoration-none me-2 text-warning">
-                                <i class="i-Download"></i>
-                            </a>
-                            <a href="javascript:void(0);" class="text-decoration-none text-danger" onclick="deleteAttachment('${file}', ${poId})">
-                                <i class="i-Close-Window"></i>
-                            </a>
-                        </div>
-                    </div>`;
-            });
-            html += '</div>';
-            container.innerHTML = html;
-        })
-        .catch(() => {
-            container.innerHTML = `<p class="text-danger">Failed to load attachments.</p>`;
-        });
-}
-</script>
-
-<script>
-    let selectedFiles = [];
-
-    function openAttachmentModal(poId) {
-        document.getElementById('attachment_po_id').value = poId;
-        const modal = new bootstrap.Modal(document.getElementById('attachmentModal'));
-        modal.show();
-    }
-
-    document.getElementById('addAttachmentBtn').addEventListener('click', () => {
-        document.getElementById('attachmentInput').click();
-    });
-
-    document.getElementById('attachmentInput').addEventListener('change', function() {
-        const list = document.getElementById('attachmentList');
-        const removeBtn = document.getElementById('removeFileBtn');
-        selectedFiles = Array.from(this.files);
-
-        if (selectedFiles.length > 0) {
-            list.innerHTML = selectedFiles.map(f => f.name).join(', ');
-            removeBtn.style.display = 'inline-block';
-        } else {
-            list.innerHTML = 'No Attachments';
-            removeBtn.style.display = 'none';
-        }
-    });
-
-    document.getElementById('removeFileBtn').addEventListener('click', function() {
-        selectedFiles = [];
-        document.getElementById('attachmentInput').value = '';
-        document.getElementById('attachmentList').innerHTML = 'No Attachments';
-        this.style.display = 'none';
-    });
-</script>
-
-<script>
-function openViewAttachmentsModal(poId) {
-    const modal = new bootstrap.Modal(document.getElementById('viewAttachmentsModal'));
-    const container = document.getElementById('attachmentsList');
-    container.innerHTML = `<p class="text-muted mb-0">Loading attachments...</p>`;
-    modal.show();
-
-    fetch(`/inventory_purchase_orders/${poId}/attachments`)
         .then(response => response.json())
         .then(data => {
             if (!data.attachments || data.attachments.length === 0) {

@@ -758,6 +758,11 @@ Route::prefix('/inventory/procurement-request')->name('procurement-request.')->g
 
     Route::put('/{id}/update-status', [ProcurementRequestController::class, 'updateStatus']);
 
+    Route::get('/{id}/canvass', [ProcurementRequestController::class, 'canvass'])->name('canvass');
+    Route::get('/{id}/fetchCanvassData', [ProcurementRequestController::class, 'fetchCanvassData'])->name('fetchCanvassData');
+    Route::post('/{id}/canvass', [ProcurementRequestController::class, 'storeCanvass'])->name('canvass.store');
+    Route::post('/{id}/canvass/upload-attachment', [ProcurementRequestController::class, 'uploadCanvassAttachment'])->name('canvass.upload');
+
     // Route::put('/{id}/archive', [ProcurementRequestController::class, 'archive'])->name('archive');
     // Route::put('/{id}/restore', [ProcurementRequestController::class, 'restore'])->name('restore');
 

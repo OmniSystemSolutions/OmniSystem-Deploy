@@ -240,6 +240,22 @@
                    Move for Canvassing
                </a>
            </li>
+
+           <!-- Add Canvas Products -->
+           <li v-if="row.status === 'canvassing'">
+               <a class="dropdown-item" :href="`/inventory/procurement-request/${row.id}/canvass`">
+                   <i class="nav-icon i-Tag-5 font-weight-bold mr-2"></i>
+                   Add Canvas Products
+               </a>
+           </li>
+
+           <!-- Approve -->
+           <li v-if="row.status === 'canvassing' && row.has_canvass">
+               <a class="dropdown-item" href="#" @click.prevent="changeStatus(row.id, 'approved')">
+                   <i class="nav-icon i-Like-2 font-weight-bold mr-2"></i>
+                   Approve
+               </a>
+           </li>
    
             <!-- Disapprove -->
            <li v-if="(row.status) == 'pending'">
@@ -308,11 +324,10 @@
             
                             let message = `Status updated successfully.`;
             
-                            // If approved, show nicely formatted message
                             if (res.status === 'canvassing') {
-                                message = `
-                                    Status updated to CANVASSING.
-                                    At: ${res.updated_at}`;
+                                message = `Status updated to CANVASSING.<br>At: ${res.updated_at}`;
+                            } else if (res.status === 'approved') {
+                                message = `Status updated to APPROVED.<br>At: ${res.updated_at}`;
                             }
             
                             Swal.fire({
