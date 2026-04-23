@@ -43,7 +43,7 @@ public function fetchItems(Request $request)
           ->with([
               'product.category',
               'product.subcategory',
-              'product.recipes.component',
+              'product.recipes.component.unit',
               'product.station',
               'component.category',
               'orderItems.cook',
@@ -80,18 +80,18 @@ public function fetchItems(Request $request)
                     'component_name' => optional($r->component)->name ?? 'Unknown Component',
                     'quantity'       => $r->quantity * $detail->quantity,
                     'base_quantity'  => $r->quantity,
-                    'unit'           => optional($r->component)->unit ?? 'pcs',
+                    'unit'           => optional($r->component->unit)->name ?? 'pcs',
                     'loss_type'      => '',
                     'loss_qty'       => 0,
                     'source'         => 'recipe',
-                ]);
+                ])->values();
             } elseif ($detail->component) {
                 $recipe = collect([[
                     'component_id'   => $detail->component->id,
                     'component_name' => $detail->component->name,
                     'quantity'       => $detail->quantity,
                     'base_quantity'  => 1,
-                    'unit'           => $detail->component->unit ?? 'pcs',
+                    'unit'           => optional($detail->component->unit)->name ?? 'pcs',
                     'loss_type'      => '',
                     'loss_qty'       => 0,
                     'source'         => 'component',
