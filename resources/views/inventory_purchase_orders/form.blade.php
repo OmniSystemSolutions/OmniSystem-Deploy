@@ -195,7 +195,7 @@
                                     @foreach($suppliers as $supplier)
                                     <option value="{{ $supplier->id }}"
                                     {{ old('supplier_id', $purchaseOrder->supplier_id ?? '') == $supplier->id ? 'selected' : '' }}>
-                                    {{ $supplier->fullname }}
+                                    {{ $supplier->supplier_name }}
                                     </option>
                                     @endforeach
                                  </select>
@@ -249,7 +249,7 @@
                                        data-id="{{ $component->id }}" 
                                        data-name="{{ $component->name }}" 
                                        data-sku="{{ $component->code }}" 
-                                       data-supplier="{{ $component->supplier->fullname ?? 'Open' }}" 
+                                       data-supplier="{{ $component->supplier->supplier_name ?? 'Open' }}" 
                                        data-category="{{ $component->category->name ?? 'N/A' }}" 
                                        data-brand="{{ $component->brand ?? '-' }}" 
                                        data-unit="{{ $component->unit->name ?? '-' }}" 
@@ -262,7 +262,7 @@
                                     </td>
                                     <td>{{ $component->name }}</td>
                                     <td>{{ $component->code }}</td>
-                                    <td>{{ $component->supplier->fullname ?? 'Open' }}</td>
+                                    <td>{{ $component->supplier->supplier_name ?? 'Open' }}</td>
                                     <td>{{ $component->category->name ?? 'N/A' }}</td>
                                     <td>{{ $component->brand ?? '-' }}</td>
                                     <td>{{ $component->unit->name ?? '-' }}</td>

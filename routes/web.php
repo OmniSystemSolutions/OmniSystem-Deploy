@@ -757,6 +757,7 @@ Route::prefix('/inventory/procurement-request')->name('procurement-request.')->g
     Route::put('/{id}', [ProcurementRequestController::class, 'update'])->name('update');
 
     Route::put('/{id}/update-status', [ProcurementRequestController::class, 'updateStatus']);
+    Route::post('/{id}/generate-pos', [ProcurementRequestController::class, 'generatePos'])->name('generate-pos');
 
     Route::get('/{id}/canvass', [ProcurementRequestController::class, 'canvass'])->name('canvass');
     Route::get('/{id}/fetchCanvassData', [ProcurementRequestController::class, 'fetchCanvassData'])->name('fetchCanvassData');

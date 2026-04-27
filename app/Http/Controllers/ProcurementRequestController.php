@@ -278,16 +278,16 @@ public function updateStatus(Request $request, $id)
         'requestedBy.employeeWorkInformations.department',
     ])->findOrFail($id);
 
-    $previousStatus = $prf->status;
-
     $prf->update(['status' => $request->status]);
 
     $posCreated = 0;
-    if ($request->status === 'approved' && $previousStatus !== 'approved') {
+
+    // Log to Process: auto-create POs from canvass (idempotent — skips already-created suppliers)
+    if ($request->status === 'processed') {
         try {
             $posCreated = $this->createPurchaseOrdersFromCanvass($prf);
         } catch (\Throwable $e) {
-            \Log::error('Failed to auto-create POs from canvass', [
+            \Log::error('Failed to auto-create POs on Log to Process', [
                 'prf_id' => $prf->id,
                 'error'  => $e->getMessage(),
             ]);
@@ -295,11 +295,36 @@ public function updateStatus(Request $request, $id)
     }
 
     return response()->json([
-        'message'      => 'Status updated successfully',
-        'status'       => $prf->status,
-        'updated_at'   => now()->format('Y-m-d H:i'),
-        'pos_created'  => $posCreated,
+        'message'     => 'Status updated successfully',
+        'status'      => $prf->status,
+        'updated_at'  => now()->format('Y-m-d H:i'),
+        'pos_created' => $posCreated,
     ]);
+}
+
+public function generatePos($id)
+{
+    $prf = ProcurementRequest::with([
+        'requestedBy.employeeWorkInformations.department',
+    ])->findOrFail($id);
+
+    try {
+        $posCreated = $this->createPurchaseOrdersFromCanvass($prf);
+
+        return response()->json([
+            'message'     => "Successfully created {$posCreated} Purchase Order(s).",
+            'pos_created' => $posCreated,
+        ]);
+    } catch (\Throwable $e) {
+        \Log::error('Failed to generate POs', [
+            'prf_id' => $prf->id,
+            'error'  => $e->getMessage(),
+        ]);
+
+        return response()->json([
+            'message' => 'Failed to generate Purchase Orders: ' . $e->getMessage(),
+        ], 500);
+    }
 }
 
 private function createPurchaseOrdersFromCanvass(ProcurementRequest $prf): int
@@ -323,14 +348,14 @@ private function createPurchaseOrdersFromCanvass(ProcurementRequest $prf): int
         optional($prf->requestedBy->employeeWorkInformations->last())->department
     )->name;
 
-    // Group by supplier — only entries where selected_supplier = true
+    // Group by supplier — only entries where selected_supplier is truthy
     $supplierGroups = [];
     foreach ($canvassItems as $canvassItem) {
-        $type    = $canvassItem['type'];
-        $itemId  = $canvassItem['item_id'];
+        $type   = $canvassItem['type'];
+        $itemId = $canvassItem['item_id'];
 
         foreach ($canvassItem['entries'] ?? [] as $entry) {
-            if (empty($entry['selected_supplier'])) continue;
+            if (!$entry['selected_supplier']) continue;
 
             $supplierId = $entry['supplier_id'] ?? null;
             if (!$supplierId) continue;
@@ -347,7 +372,28 @@ private function createPurchaseOrdersFromCanvass(ProcurementRequest $prf): int
 
     if (empty($supplierGroups)) return 0;
 
-    // One base sequence per PRF, suffix -1/-2/-3 per supplier
+    \Log::info('createPurchaseOrdersFromCanvass', [
+        'prf_id'          => $prf->id,
+        'prf_ref'         => $prf->reference_no,
+        'supplier_groups' => array_keys($supplierGroups),
+    ]);
+
+    // Suppliers that already have a PO for this PRF — skip them (idempotent)
+    $existingSupplierIds = InventoryPurchaseOrder::where('prf_reference_number', $prf->reference_no)
+        ->pluck('supplier_id')
+        ->map(fn($id) => (int) $id)
+        ->all();
+
+    // Suppliers still needing a PO
+    $pendingGroups = array_filter(
+        $supplierGroups,
+        fn($supplierId) => !in_array((int) $supplierId, $existingSupplierIds, true),
+        ARRAY_FILTER_USE_KEY
+    );
+
+    if (empty($pendingGroups)) return 0;
+
+    // Base PO number — derives from the highest existing sequence for this branch
     $maxSeq = DB::table('inventory_purchase_orders')
         ->where('po_number', 'like', "PO-{$branchId}-%")
         ->selectRaw('MAX(CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(po_number, "-", 3), "-", -1) AS UNSIGNED)) as max_seq')
@@ -357,58 +403,62 @@ private function createPurchaseOrdersFromCanvass(ProcurementRequest $prf): int
 
     $created       = 0;
     $supplierIndex = 1;
-    foreach ($supplierGroups as $supplierId => $items) {
-        $poNumber = $baseNumber . '-' . $supplierIndex++;
 
-        // Collect attachments from all entries for this supplier
-        $attachments = collect($items)
-            ->pluck('attachment_path')
-            ->filter()
-            ->values()
-            ->toArray();
+    DB::transaction(function () use (
+        $pendingGroups, $baseNumber, $prf, $branchId, $taxRate, $department, &$created, &$supplierIndex
+    ) {
+        foreach ($pendingGroups as $supplierId => $items) {
+            $poNumber = $baseNumber . '-' . $supplierIndex++;
 
-        $po = InventoryPurchaseOrder::create([
-            'po_number'            => $poNumber,
-            'user_id'              => $prf->requested_by,
-            'department'           => $department,
-            'supplier_id'          => $supplierId,
-            'prf_reference_number' => $prf->reference_no,
-            'type_of_request'      => $prf->type,
-            'select_origin'        => $prf->origin,
-            'status'               => 'pending',
-            'branch_id'            => $branchId,
-            'attachments'          => !empty($attachments) ? json_encode($attachments) : null,
-        ]);
+            $attachments = collect($items)
+                ->pluck('attachment_path')
+                ->filter()
+                ->values()
+                ->toArray();
 
-        // Create PO details — components only (products don't map to PoDetail)
-        foreach ($items as $item) {
-            if ($item['type'] !== 'component') continue;
-
-            $component  = Component::with('branchStocks')->find($item['item_id']);
-            if (!$component) continue;
-
-            $branchStock = $component->branchStocks()->where('branch_id', $branchId)->first();
-            $onhand      = $branchStock ? (float) $branchStock->onhand : 0;
-
-            $qty      = $item['qty'];
-            $unitCost = $item['price_per_unit'];
-            $subTotal = $qty * $unitCost;
-            $tax      = $subTotal * $taxRate;
-
-            $po->details()->create([
-                'component_id' => $item['item_id'],
-                'qty'          => $qty,
-                'unit_cost'    => $unitCost,
-                'tax'          => $tax,
-                'sub_total'    => $subTotal,
-                'onhand'       => $onhand,
+            $po = InventoryPurchaseOrder::create([
+                'po_number'            => $poNumber,
+                'user_id'              => $prf->requested_by,
+                'department'           => $department,
+                'supplier_id'          => $supplierId,
+                'prf_reference_number' => $prf->reference_no,
+                'type_of_request'      => $prf->type,
+                'select_origin'        => $prf->origin,
+                'status'               => 'pending',
+                'branch_id'            => $branchId,
+                'attachments'          => !empty($attachments) ? json_encode($attachments) : null,
             ]);
 
-            $component->update(['cost' => $unitCost]);
-        }
+            // Create PO details — components only (products don't map to PoDetail)
+            foreach ($items as $item) {
+                if ($item['type'] !== 'component') continue;
 
-        $created++;
-    }
+                $component = Component::with('branchStocks')->find($item['item_id']);
+                if (!$component) continue;
+
+                $branchStock = $component->branchStocks()->where('branch_id', $branchId)->first();
+                $onhand      = $branchStock ? (float) $branchStock->onhand : 0;
+
+                $qty      = $item['qty'];
+                $unitCost = $item['price_per_unit'];
+                $subTotal = $qty * $unitCost;
+                $tax      = $subTotal * $taxRate;
+
+                $po->details()->create([
+                    'component_id' => $item['item_id'],
+                    'qty'          => $qty,
+                    'unit_cost'    => $unitCost,
+                    'tax'          => $tax,
+                    'sub_total'    => $subTotal,
+                    'onhand'       => $onhand,
+                ]);
+
+                $component->update(['cost' => $unitCost]);
+            }
+
+            $created++;
+        }
+    });
 
     return $created;
 }
@@ -420,7 +470,7 @@ public function canvass($id)
         'requestingBranch:id,name',
     ])->findOrFail($id);
 
-    $suppliers = Supplier::select('id', 'fullname', 'company')->get();
+    $suppliers = Supplier::select('id', 'supplier_name', 'contact_person')->get();
 
     $branchId = $prf->requesting_branch_id;
     $maxSeq = DB::table('inventory_purchase_orders')

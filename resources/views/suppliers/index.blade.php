@@ -66,17 +66,14 @@
                                                 @csrf
                                                 <div class="modal-body">
                                                     <div class="row">
-                                                            {{-- <div class="col-md-4 text-center">
-                                                            <div class="mb-6">
-                                                                <div class="border rounded p-3 d-flex flex-column align-items-center justify-content-center" style="height: 160px;">
-                                                                    <span class="text-muted">Drag & Drop image<br>(or) Select</span>
-                                                                </div>
-                                                            </div>
-                                                        </div> --}}
                                                         <input type="hidden" name="id" value="">
                                                         <div class="col-md-6">
-                                                            <label>Fullname *</label>
-                                                            <input type="text" name="fullname" class="form-control" required>
+                                                            <label>Supplier Name <span class="text-danger">*</span></label>
+                                                            <input type="text" name="supplier_name" class="form-control" required>
+                                                        </div>
+                                                        <div class="col-md-6">
+                                                            <label>Contact Person</label>
+                                                            <input type="text" name="contact_person" class="form-control">
                                                         </div>
                                                         <div class="col-md-6">
                                                             <label>Mobile #</label>
@@ -95,41 +92,19 @@
                                                             <input type="date" name="supplier_since" class="form-control">
                                                         </div>
                                                         <div class="col-md-6">
-                                                            <label>Company</label>
-                                                            <input type="text" name="company" class="form-control">
-                                                        </div>
-                                                        <div class="col-md-6">
                                                             <label>TIN</label>
                                                             <input type="text" name="tin" class="form-control">
                                                         </div>
                                                         <div class="col-md-6">
-                                                        <label for="type">Supplier Type</label>
+                                                        <label for="type">Supplier Type <span class="text-danger">*</span></label>
                                                         <select name="supplier_type" id="supplier_type" class="form-control" required>
                                                             <option value="" disabled selected>Select Supplier Type</option>
-                                                            <option value="Food and Beverage Supplier" 
-                                                                {{ old('supplier_type', $supplier->supplier_type ?? '') == 'Food and Beverage Supplier' ? 'selected' : '' }}>
-                                                                Food and Beverage Supplier
-                                                            </option>
-                                                                            <option value="Packaging Supplier" 
-                                                                {{ old('supplier_type', $supplier->supplier_type ?? '') == 'Packaging Supplier' ? 'selected' : '' }}>
-                                                                Packaging Supplier
-                                                            </option>
-                                                            <option value="Equipment Supplier" 
-                                                                {{ old('supplier_type', $supplier->supplier_type ?? '') == 'Equipment Supplier' ? 'selected' : '' }}>
-                                                                Equipment Supplier
-                                                            </option>
-                                                            <option value="Cleaning Supplies" 
-                                                                {{ old('supplier_type', $supplier->supplier_type ?? '') == 'Cleaning Supplies' ? 'selected' : '' }}>
-                                                                Cleaning Supplies
-                                                            </option>
-                                                            <option value="Utility Providers" 
-                                                                {{ old('supplier_type', $supplier->supplier_type ?? '') == 'Utility Providers' ? 'selected' : '' }}>
-                                                                Utility Providers
-                                                            </option>
-                                                            <option value="Service Providers" 
-                                                                {{ old('supplier_type', $supplier->supplier_type ?? '') == 'Service Providers' ? 'selected' : '' }}>
-                                                                Service Providers
-                                                            </option>
+                                                            <option value="Food and Beverage Supplier">Food and Beverage Supplier</option>
+                                                            <option value="Packaging Supplier">Packaging Supplier</option>
+                                                            <option value="Equipment Supplier">Equipment Supplier</option>
+                                                            <option value="Cleaning Supplies">Cleaning Supplies</option>
+                                                            <option value="Utility Providers">Utility Providers</option>
+                                                            <option value="Service Providers">Service Providers</option>
                                                         </select>
                                                         @error('supplier_type')
                                                             <small class="text-danger">{{ $message }}</small>
@@ -157,7 +132,6 @@
                         </div>
                     </div>
 
-                
 
 
                     <div class="vgt-responsive mt-3">
@@ -165,12 +139,12 @@
                             <thead>
                                 <tr>
                                     <th>Supplier ID</th>
-                                    <th>Fullname</th>
+                                    <th>Supplier Name</th>
+                                    <th>Contact Person</th>
                                     <th>Mobile #</th>
                                     <th>Landline #</th>
                                     <th>Email</th>
                                     <th>Supplier Since</th>
-                                    <th>Company</th>
                                     <th>TIN</th>
                                     <th>Supplier Type</th>
                                     <th>Address</th>
@@ -181,12 +155,12 @@
                                 @forelse($suppliers as $supplier)
                                     <tr>
                                         <td>{{ $supplier->id }}</td>
-                                        <td>{{ $supplier->fullname }}</td>
+                                        <td>{{ $supplier->supplier_name }}</td>
+                                        <td>{{ $supplier->contact_person }}</td>
                                         <td>{{ $supplier->mobile_no }}</td>
                                         <td>{{ $supplier->landline_no }}</td>
                                         <td>{{ $supplier->email }}</td>
                                         <td>{{ $supplier->supplier_since }}</td>
-                                        <td>{{ $supplier->company }}</td>
                                         <td>{{ $supplier->tin }}</td>
                                         <td>{{ $supplier->supplier_type }}</td>
                                         <td>{{ $supplier->address }}</td>
@@ -260,8 +234,12 @@
                                     <div class="row">
                                     <input type="hidden" name="id" value="">
                                     <div class="col-md-6">
-                                        <label>Fullname *</label>
-                                        <input type="text" name="fullname" class="form-control" required value="{{ $supplier->fullname }}">
+                                        <label>Supplier Name <span class="text-danger">*</span></label>
+                                        <input type="text" name="supplier_name" class="form-control" required value="{{ $supplier->supplier_name }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label>Contact Person</label>
+                                        <input type="text" name="contact_person" class="form-control" value="{{ $supplier->contact_person }}">
                                     </div>
                                     <div class="col-md-6">
                                         <label>Mobile #</label>
@@ -280,38 +258,34 @@
                                         <input type="date" name="supplier_since" class="form-control" value="{{ $supplier->supplier_since }}">
                                     </div>
                                     <div class="col-md-6">
-                                        <label>Company</label>
-                                        <input type="text" name="company" class="form-control" value="{{ $supplier->company }}">
-                                    </div>
-                                    <div class="col-md-6">
                                         <label>TIN</label>
                                         <input type="text" name="tin" class="form-control" value="{{ $supplier->tin }}">
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="type">Supplier Type</label>
+                                        <label for="type">Supplier Type <span class="text-danger">*</span></label>
                                         <select name="supplier_type" id="supplier_type" class="form-control" required>
                                             <option value="" disabled selected>Select Supplier Type</option>
-                                            <option value="Food and Beverage Supplier" 
+                                            <option value="Food and Beverage Supplier"
                                                 {{ old('supplier_type', $supplier->supplier_type ?? '') == 'Food and Beverage Supplier' ? 'selected' : '' }}>
                                                 Food and Beverage Supplier
                                             </option>
-                                                            <option value="Packaging Supplier" 
+                                            <option value="Packaging Supplier"
                                                 {{ old('supplier_type', $supplier->supplier_type ?? '') == 'Packaging Supplier' ? 'selected' : '' }}>
                                                 Packaging Supplier
                                             </option>
-                                            <option value="Equipment Supplier" 
+                                            <option value="Equipment Supplier"
                                                 {{ old('supplier_type', $supplier->supplier_type ?? '') == 'Equipment Supplier' ? 'selected' : '' }}>
                                                 Equipment Supplier
                                             </option>
-                                            <option value="Cleaning Supplies" 
+                                            <option value="Cleaning Supplies"
                                                 {{ old('supplier_type', $supplier->supplier_type ?? '') == 'Cleaning Supplies' ? 'selected' : '' }}>
                                                 Cleaning Supplies
                                             </option>
-                                            <option value="Utility Providers" 
+                                            <option value="Utility Providers"
                                                 {{ old('supplier_type', $supplier->supplier_type ?? '') == 'Utility Providers' ? 'selected' : '' }}>
                                                 Utility Providers
                                             </option>
-                                            <option value="Service Providers" 
+                                            <option value="Service Providers"
                                                 {{ old('supplier_type', $supplier->supplier_type ?? '') == 'Service Providers' ? 'selected' : '' }}>
                                                 Service Providers
                                             </option>
@@ -320,7 +294,7 @@
                                             <small class="text-danger">{{ $message }}</small>
                                         @enderror
                                     </div>
-                                    
+
                                     <div class="col-md-12">
                                         <label>Address</label>
                                         <textarea name="address" class="form-control">{{ $supplier->address }}</textarea>
@@ -337,7 +311,7 @@
             </div>
             @empty
             <tr>
-                <td colspan="8" class="text-center">No suppliers found.</td>
+                <td colspan="11" class="text-center">No suppliers found.</td>
             </tr>
             @endforelse
                             </tbody>

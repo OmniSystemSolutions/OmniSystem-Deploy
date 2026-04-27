@@ -104,6 +104,9 @@
                             @endif
 
                             <th>Status</th>
+                            @if($status === 'pending')
+                                <th>PRF Status</th>
+                            @endif
 
                             @if($status === 'archived')
                                 <th>Archived By</th>
@@ -123,7 +126,7 @@
                                 <td>{{ $po->prf_reference_number ?? '—' }}</td>
                                 <td>{{ $po->type_of_request ?? '—' }}</td>
                                 <td>{{ $po->select_origin ?? '—' }}</td>
-                                <td>{{ $po->supplier?->fullname ?? '—' }}</td>
+                                <td>{{ $po->supplier?->supplier_name ?? '—' }}</td>
                                 <td class="text-right">
                                     <button type="button" 
                                             class="btn btn-sm btn-outline-info"
@@ -143,14 +146,29 @@
                                 
                                 
                                 <td>
-                                    <span class="badge 
-                                        {{ $po->status === 'pending' ? 'badge-warning' : 
-                                            ($po->status === 'approved' ? 'badge-success' : 
-                                            ($po->status === 'completed' ? 'badge-primary' : 
+                                    <span class="badge
+                                        {{ $po->status === 'pending' ? 'badge-warning' :
+                                            ($po->status === 'approved' ? 'badge-success' :
+                                            ($po->status === 'completed' ? 'badge-primary' :
                                             ($po->status === 'disapproved' ? 'badge-danger' : 'badge-secondary'))) }}">
                                         {{ ucfirst($po->status) }}
                                     </span>
                                 </td>
+                                @if($status === 'pending')
+                                    <td>
+                                        @if($po->prf_status)
+                                            <span class="badge
+                                                {{ $po->prf_status === 'processed'   ? 'badge-info'    :
+                                                   ($po->prf_status === 'approved'   ? 'badge-success' :
+                                                   ($po->prf_status === 'canvassing' ? 'badge-warning' :
+                                                   ($po->prf_status === 'disapproved'? 'badge-danger'  : 'badge-secondary'))) }}">
+                                                {{ ucfirst($po->prf_status) }}
+                                            </span>
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </td>
+                                @endif
 
                         {{-- ✅ Archived Tab Columns --}}
                     @if($status === 'archived')
@@ -362,9 +380,9 @@ function openLogStocksModal(poId) {
                 const receivedAlready = Number(d.received_qty ?? 0);
                 const remaining = Math.max(0, totalRequested - receivedAlready);
 
-                const supplierName = (data && data.supplier && data.supplier.fullname)
-                    ? data.supplier.fullname
-                    : (comp.fullname ?? comp.supplier ?? '—');
+                const supplierName = (data && data.supplier && data.supplier.supplier_name)
+                    ? data.supplier.supplier_name
+                    : (comp.supplier_name ?? comp.supplier ?? '—');
 
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
@@ -720,7 +738,7 @@ function viewPOInvoice(poId) {
                         <p><strong>NO.:</strong> ${data.po_number}</p>
                         <p class="mb-0"><strong>Requested by:</strong> ${data.user && data.user.name ? data.user.name : '—'}</p>
                         <p class="mb-0"><strong>Department:</strong> ${data.department ? data.department : '—'}</p>
-                        <p><strong>PO Addressed to (Supplier):</strong> ${data.supplier?.fullname ?? '—'}</p>
+                        <p><strong>PO Addressed to (Supplier):</strong> ${data.supplier?.supplier_name ?? '—'}</p>
                         <p><strong>Address:</strong> ${data.supplier?.address ?? '—'}</p>
                     </div>
                     <div class="col-md-6">
