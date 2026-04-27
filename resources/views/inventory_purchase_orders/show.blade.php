@@ -38,10 +38,10 @@
                 <tbody>
                     @foreach($components as $component)
                     <tr>
-                        <td><input type="checkbox" class="component-checkbox" data-id="{{ $component->id }}" data-name="{{ $component->name }}" data-sku="{{ $component->code }}" data-supplier="{{ $component->supplier->fullname ?? 'Open' }}" data-category="{{ $component->category->name ?? 'N/A' }}" data-brand="{{ $component->brand ?? '-' }}" data-unit="{{ $component->unit }}"></td>
+                        <td><input type="checkbox" class="component-checkbox" data-id="{{ $component->id }}" data-name="{{ $component->name }}" data-sku="{{ $component->code }}" data-supplier="{{ $component->supplier->supplier_name ?? 'Open' }}" data-category="{{ $component->category->name ?? 'N/A' }}" data-brand="{{ $component->brand ?? '-' }}" data-unit="{{ $component->unit }}"></td>
                         <td>{{ $component->name }}</td>
                         <td>{{ $component->code }}</td>
-                        <td>{{ $component->supplier->fullname ?? 'Open' }}</td>
+                        <td>{{ $component->supplier->supplier_name ?? 'Open' }}</td>
                         <td>{{ $component->category->name ?? 'N/A' }}</td>
                         <td>{{ $component->brand ?? '-' }}</td>
                         <td>{{ $component->unit }}</td>

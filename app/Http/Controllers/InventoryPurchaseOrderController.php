@@ -24,6 +24,19 @@ class InventoryPurchaseOrderController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Attach PRF status to each PO for the pending tab display
+        if ($status === 'pending') {
+            $refs = $purchaseOrders->pluck('prf_reference_number')->filter()->unique()->values();
+
+            $prfStatuses = DB::table('procurement_requests')
+                ->whereIn('reference_no', $refs)
+                ->pluck('status', 'reference_no');
+
+            $purchaseOrders->each(function ($po) use ($prfStatuses) {
+                $po->prf_status = $prfStatuses[$po->prf_reference_number] ?? null;
+            });
+        }
+
         return view('inventory_purchase_orders.index', compact('purchaseOrders', 'status'));
     }
 
@@ -50,7 +63,7 @@ class InventoryPurchaseOrderController extends Controller
                 $q->where('components.name', 'like', "%{$search}%")
                   ->orWhere('components.code', 'like', "%{$search}%")
                   ->orWhereHas('supplier', function ($q2) use ($search) {
-                      $q2->where('fullname', 'like', "%{$search}%");
+                      $q2->where('supplier_name', 'like', "%{$search}%");
                   })
                   ->orWhereHas('category', function ($q3) use ($search) {
                       $q3->where('name', 'like', "%{$search}%");

@@ -118,7 +118,6 @@
                                 <th>Unit</th>
                                 <th>Qty</th>
                                 <th>Canvassed Price/Unit</th>
-                                <th>Tax</th>
                                 <th>Total Price</th>
                                 <th>Supplier</th>
                                 <th>Expected PO #</th>
@@ -130,7 +129,7 @@
                         <tbody>
                             <template v-if="items.length === 0">
                                 <tr>
-                                    <td colspan="14" class="text-center text-muted">No items found.</td>
+                                    <td colspan="13" class="text-center text-muted">No items found.</td>
                                 </tr>
                             </template>
 
@@ -156,32 +155,30 @@
                                             <button class="btn btn-success qty-btn" @click="increment(itemIndex, entryIndex)">+</button>
                                         </div>
                                     </td>
-                                    <td>₱@{{ formatCurrency(entry.tax) }}</td>
                                     <td>₱@{{ formatCurrency(entry.total_price) }}</td>
-                                    <!-- Supplier v-select -->
-                                    <td style="min-width:220px;">
+                                    <!-- Supplier v-select — stores full {id,label} object, no lookup needed -->
+                                    <td style="min-width:240px;">
                                         <div class="d-flex align-items-center">
                                             <div style="flex:1;">
                                                 <v-select
-                                                    v-model="entry.supplier_id"
+                                                    v-model="entry.supplierOption"
                                                     :options="supplierOptions"
-                                                    :reduce="s => s.id"
                                                     label="label"
                                                     placeholder="Select Supplier"
                                                     :clearable="false">
                                                 </v-select>
                                             </div>
-                                            <button class="btn btn-sm btn-warning ml-1" title="Supplier Info"
-                                                @click="viewSupplier(entry.supplier_id)">
-                                                <i class="i-Information"></i>
+                                            <button class="btn btn-sm btn-success ml-1" title="Add New Supplier"
+                                                @click="openAddSupplier(itemIndex, entryIndex)">
+                                                <i class="i-Add"></i>
                                             </button>
                                         </div>
                                     </td>
                                     <!-- Expected PO # -->
                                     <td>
-                                        <span v-if="entry.selected_supplier && entry.supplier_id && supplierPoMap[entry.supplier_id]"
+                                        <span v-if="entry.selected_supplier && entry.supplierOption && supplierPoMap[entry.supplierOption.id]"
                                               class="badge badge-info text-white">
-                                            @{{ supplierPoMap[entry.supplier_id] }}
+                                            @{{ supplierPoMap[entry.supplierOption.id] }}
                                         </span>
                                         <span v-else class="text-muted small">—</span>
                                     </td>
@@ -216,21 +213,14 @@
                                     </td>
                                 </tr>
 
-                                <!-- "Add" row — shows item info if no entries yet, otherwise blank -->
+                                <!-- "Add" row -->
                                 <tr :key="`add-${itemIndex}`">
                                     <td>@{{ item.entries.length === 0 ? item.name : '' }}</td>
                                     <td>@{{ item.entries.length === 0 ? item.code : '' }}</td>
                                     <td>@{{ item.entries.length === 0 ? item.category : '' }}</td>
                                     <td>@{{ item.entries.length === 0 ? item.brand : '' }}</td>
                                     <td>@{{ item.entries.length === 0 ? item.unit : '' }}</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
-                                    <td></td>
+                                    <td></td><td></td><td></td><td></td><td></td><td></td><td></td>
                                     <td class="text-right">
                                         <button class="btn btn-sm btn-success" @click="addEntry(itemIndex)">Add</button>
                                     </td>
@@ -249,6 +239,77 @@
             </div>
         </div>
     </div>
+
+    <!-- ===== Add New Supplier Modal ===== -->
+    <div class="modal fade" id="addSupplierModal" tabindex="-1" role="dialog" aria-labelledby="addSupplierModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addSupplierModalLabel">
+                        <i class="i-Add text-success mr-1"></i> Add New Supplier
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close">x</button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label>Supplier Name <span class="text-danger">*</span></label>
+                            <input type="text" v-model="newSupplier.supplier_name" class="form-control" placeholder="Enter supplier name">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Contact Person</label>
+                            <input type="text" v-model="newSupplier.contact_person" class="form-control" placeholder="Enter contact person">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Mobile #</label>
+                            <input type="text" v-model="newSupplier.mobile_no" class="form-control" placeholder="e.g. 09XX-XXX-XXXX">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Landline #</label>
+                            <input type="text" v-model="newSupplier.landline_no" class="form-control" placeholder="e.g. (02) XXXX-XXXX">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Email</label>
+                            <input type="email" v-model="newSupplier.email" class="form-control" placeholder="supplier@example.com">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Supplier Since</label>
+                            <input type="date" v-model="newSupplier.supplier_since" class="form-control">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>TIN</label>
+                            <input type="text" v-model="newSupplier.tin" class="form-control" placeholder="000-000-000">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label>Supplier Type <span class="text-danger">*</span></label>
+                            <select v-model="newSupplier.supplier_type" class="form-control">
+                                <option value="" disabled>Select Supplier Type</option>
+                                <option value="Food and Beverage Supplier">Food and Beverage Supplier</option>
+                                <option value="Packaging Supplier">Packaging Supplier</option>
+                                <option value="Equipment Supplier">Equipment Supplier</option>
+                                <option value="Cleaning Supplies">Cleaning Supplies</option>
+                                <option value="Utility Providers">Utility Providers</option>
+                                <option value="Service Providers">Service Providers</option>
+                            </select>
+                        </div>
+                        <div class="col-md-12 mb-3">
+                            <label>Address</label>
+                            <textarea v-model="newSupplier.address" class="form-control" rows="2" placeholder="Enter address"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary btn-sm" @click="submitNewSupplier" :disabled="addingSupplier">
+                        <span v-if="addingSupplier"><span class="spinner-border spinner-border-sm mr-1"></span>Saving...</span>
+                        <span v-else><i class="i-Check mr-1"></i>Save Supplier</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ===== End Add New Supplier Modal ===== -->
+
 </div>
 @endsection
 
@@ -266,32 +327,41 @@ new Vue({
         prfId: {{ $prf->id }},
         branchId: {{ $prf->requesting_branch_id ?? 'null' }},
         nextPoSeq: {{ (int) last(explode('-', $nextPoNumber)) }},
+        addingSupplierTarget: null,
+        addingSupplier: false,
+        newSupplier: {
+            supplier_name: '',
+            contact_person: '',
+            mobile_no: '',
+            landline_no: '',
+            email: '',
+            supplier_since: '',
+            tin: '',
+            supplier_type: '',
+            address: '',
+        },
     },
     computed: {
         supplierOptions() {
-            return this.suppliers.map(s => ({
-                id: s.id,
-                label: s.company || s.fullname,
-            }));
+            return this.suppliers.map(s => this.toOption(s));
         },
         uniqueSupplierCount() {
             const ids = new Set();
             this.items.forEach(item => {
                 item.entries.forEach(e => {
-                    if (e.selected_supplier && e.supplier_id) ids.add(e.supplier_id);
+                    if (e.selected_supplier && e.supplierOption) ids.add(e.supplierOption.id);
                 });
             });
             return ids.size;
         },
-        // Maps supplier_id → expected PO # using shared base + suffix (only for selected_supplier = true)
         supplierPoMap() {
             const map = {};
             const base = 'PO-' + this.branchId + '-' + String(this.nextPoSeq).padStart(6, '0');
             let index = 1;
             this.items.forEach(item => {
                 item.entries.forEach(e => {
-                    if (e.selected_supplier && e.supplier_id && !map[e.supplier_id]) {
-                        map[e.supplier_id] = base + '-' + index++;
+                    if (e.selected_supplier && e.supplierOption && !map[e.supplierOption.id]) {
+                        map[e.supplierOption.id] = base + '-' + index++;
                     }
                 });
             });
@@ -302,12 +372,20 @@ new Vue({
         this.fetchData();
     },
     methods: {
+        // Converts a raw supplier record into the {id, label} shape v-select stores directly.
+        // Storing the full object means v-select never needs to search supplierOptions for a label.
+        toOption(s) {
+            return {
+                id: s.id,
+                label: s.supplier_name + (s.contact_person ? ' — ' + s.contact_person : ''),
+            };
+        },
+
         fetchData() {
             axios.get(`/inventory/procurement-request/${this.prfId}/fetchCanvassData`)
                 .then(response => {
                     const { items, canvass_items } = response.data;
 
-                    // Build a map of saved entries keyed by type+item_id
                     const savedMap = {};
                     (canvass_items || []).forEach(c => {
                         savedMap[`${c.type}_${c.item_id}`] = c.entries || [];
@@ -318,16 +396,18 @@ new Vue({
                         const savedEntries = savedMap[key] || [];
                         return {
                             ...item,
-                            entries: savedEntries.map(e => ({
-                                price_per_unit:    e.price_per_unit || 0,
-                                tax:               e.tax || 0,
-                                total_price:       e.total_price || 0,
-                                supplier_id:       e.supplier_id || null,
-                                selected_supplier: e.selected_supplier || false,
-                                attachment_path:   e.attachment_path || null,
-                                attachment_name:   e.attachment_name || null,
-                                uploading:         false,
-                            })),
+                            entries: savedEntries.map(e => {
+                                const matched = this.suppliers.find(s => s.id == e.supplier_id);
+                                return {
+                                    price_per_unit:    e.price_per_unit || 0,
+                                    total_price:       e.total_price || 0,
+                                    supplierOption:    matched ? this.toOption(matched) : null,
+                                    selected_supplier: e.selected_supplier || false,
+                                    attachment_path:   e.attachment_path || null,
+                                    attachment_name:   e.attachment_name || null,
+                                    uploading:         false,
+                                };
+                            }),
                         };
                     });
                 })
@@ -341,9 +421,8 @@ new Vue({
         addEntry(itemIndex) {
             this.items[itemIndex].entries.push({
                 price_per_unit:    0,
-                tax:               0,
                 total_price:       0,
-                supplier_id:       null,
+                supplierOption:    null,
                 selected_supplier: false,
                 attachment_path:   null,
                 attachment_name:   null,
@@ -374,12 +453,10 @@ new Vue({
         recalculate(itemIndex, entryIndex) {
             const item  = this.items[itemIndex];
             const entry = item.entries[entryIndex];
-            const price   = parseFloat(entry.price_per_unit) || 0;
-            const qty     = parseFloat(item.quantity) || 0;
-            const taxRate = 0.12;
+            const price    = parseFloat(entry.price_per_unit) || 0;
+            const qty      = parseFloat(item.quantity) || 0;
             const subtotal = price * qty;
-            entry.tax         = parseFloat((subtotal * taxRate).toFixed(2));
-            entry.total_price = parseFloat((subtotal + entry.tax).toFixed(2));
+            entry.total_price = parseFloat(subtotal.toFixed(2));
             this.$set(this.items[itemIndex].entries, entryIndex, { ...entry });
         },
 
@@ -387,19 +464,57 @@ new Vue({
             return parseFloat(val || 0).toFixed(2);
         },
 
-        viewSupplier(supplierId) {
-            if (!supplierId) {
-                Swal.fire('No Supplier', 'Please select a supplier first.', 'info');
+        openAddSupplier(itemIndex, entryIndex) {
+            this.addingSupplierTarget = { itemIndex, entryIndex };
+            this.newSupplier = {
+                supplier_name: '', contact_person: '', mobile_no: '',
+                landline_no: '', email: '', supplier_since: '',
+                tin: '', supplier_type: '', address: '',
+            };
+            $('#addSupplierModal').modal('show');
+        },
+
+        submitNewSupplier() {
+            if (!this.newSupplier.supplier_name.trim()) {
+                Swal.fire('Required', 'Supplier Name is required.', 'warning');
                 return;
             }
-            const supplier = this.suppliers.find(s => s.id == supplierId);
-            if (supplier) {
-                Swal.fire({
-                    title: 'Supplier Info',
-                    html: `<strong>Name:</strong> ${supplier.fullname}<br><strong>Company:</strong> ${supplier.company || 'N/A'}`,
-                    icon: 'info',
-                });
+            if (!this.newSupplier.supplier_type) {
+                Swal.fire('Required', 'Supplier Type is required.', 'warning');
+                return;
             }
+
+            this.addingSupplier = true;
+
+            axios.post('{{ route("suppliers.store") }}', this.newSupplier)
+                .then(response => {
+                    const supplier = response.data;
+
+                    // Same pattern as products/create station auto-fill:
+                    // push to list first, then assign the full option object directly —
+                    // no DOM search, no timing issue, works like option.selected = true
+                    this.suppliers.push(supplier);
+
+                    if (this.addingSupplierTarget !== null) {
+                        const { itemIndex, entryIndex } = this.addingSupplierTarget;
+                        const entry = { ...this.items[itemIndex].entries[entryIndex], supplierOption: this.toOption(supplier) };
+                        this.$set(this.items[itemIndex].entries, entryIndex, entry);
+                    }
+
+                    $('#addSupplierModal').modal('hide');
+                    Swal.fire({
+                        title: 'Supplier Added!',
+                        text: `"${supplier.supplier_name}" has been added and selected.`,
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false,
+                    });
+                })
+                .catch(err => {
+                    console.error(err);
+                    Swal.fire('Error', err.response?.data?.message || 'Failed to create supplier.', 'error');
+                })
+                .finally(() => { this.addingSupplier = false; });
         },
 
         uploadAttachment(itemIndex, entryIndex, event) {
@@ -459,7 +574,7 @@ new Vue({
             }
 
             for (const item of itemsWithEntries) {
-                const missing = item.entries.find(e => !e.supplier_id);
+                const missing = item.entries.find(e => !e.supplierOption);
                 if (missing) {
                     Swal.fire('Missing Supplier', `Please select a supplier for all entries of "${item.name}".`, 'warning');
                     return;
@@ -483,9 +598,8 @@ new Vue({
                     name:    item.name,
                     entries: item.entries.map(e => ({
                         price_per_unit:    e.price_per_unit,
-                        tax:               e.tax,
                         total_price:       e.total_price,
-                        supplier_id:       e.supplier_id,
+                        supplier_id:       e.supplierOption ? e.supplierOption.id : null,
                         selected_supplier: e.selected_supplier,
                         attachment_path:   e.attachment_path || null,
                         attachment_name:   e.attachment_name || null,
@@ -497,9 +611,7 @@ new Vue({
                 })
                 .then(() => {
                     Swal.fire('Submitted!', 'Canvass submitted successfully.', 'success')
-                        .then(() => {
-                            window.location = '{{ route('procurement-request.index') }}';
-                        });
+                        .then(() => { window.location = '{{ route('procurement-request.index') }}'; });
                 })
                 .catch(err => {
                     console.error(err);

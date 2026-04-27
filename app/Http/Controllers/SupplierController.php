@@ -30,27 +30,21 @@ class SupplierController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'fullname' => 'required|string|max:255',
+            'supplier_name' => 'required|string|max:255',
+            'contact_person' => 'nullable|string|max:255',
             'mobile_no' => 'nullable|string|max:20',
             'landline_no' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
             'supplier_since' => 'nullable|date',
-            'company' => 'nullable|string|max:255',
             'tin' => 'nullable|string|max:50',
             'supplier_type' => 'nullable|string|max:100',
             'address' => 'nullable|string|max:500',
         ]);
 
-        
         $supplier = Supplier::create($validated);
 
-        // ✅ IF AJAX REQUEST
-        if ($request->ajax()) {
-            return response()->json([
-                'id' => $supplier->id,
-                'fullname' => $supplier->fullname,
-                'message' => 'Supplier created successfully.'
-            ]);
+        if ($request->wantsJson()) {
+            return response()->json($supplier->fresh());
         }
 
         return redirect()->route('suppliers.index')->with('success', 'Supplier created successfully.');
@@ -70,12 +64,12 @@ class SupplierController extends Controller
     public function update(Request $request, Supplier $supplier)
     {
         $validated = $request->validate([
-            'fullname' => 'required|string|max:255',
+            'supplier_name' => 'required|string|max:255',
+            'contact_person' => 'nullable|string|max:255',
             'mobile_no' => 'nullable|string|max:20',
             'landline_no' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
             'supplier_since' => 'nullable|date',
-            'company' => 'nullable|string|max:255',
             'tin' => 'nullable|string|max:50',
             'supplier_type' => 'nullable|string|max:100',
             'address' => 'nullable|string|max:500',
@@ -83,11 +77,10 @@ class SupplierController extends Controller
 
         $supplier->update($validated);
 
-        // ✅ IF AJAX REQUEST
-        if ($request->ajax()) {
+        if ($request->wantsJson()) {
             return response()->json([
                 'id' => $supplier->id,
-                'fullname' => $supplier->fullname,
+                'supplier_name' => $supplier->supplier_name,
                 'message' => 'Supplier updated successfully.'
             ]);
         }

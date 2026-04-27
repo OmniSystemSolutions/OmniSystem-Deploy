@@ -256,7 +256,23 @@
                    Approve
                </a>
            </li>
-   
+
+           <!-- Create PO -->
+           <li v-if="row.status === 'approved' && row.has_canvass">
+               <a class="dropdown-item" href="#" @click.prevent="generatePos(row.id)">
+                   <i class="nav-icon i-Financial font-weight-bold mr-2"></i>
+                   Create PO
+               </a>
+           </li>
+
+           <!-- Log to Process -->
+           <li v-if="row.status === 'approved'">
+               <a class="dropdown-item" href="#" @click.prevent="changeStatus(row.id, 'processed')">
+                   <i class="nav-icon i-Checked-User font-weight-bold mr-2"></i>
+                   Log to Process
+               </a>
+           </li>
+
             <!-- Disapprove -->
            <li v-if="(row.status) == 'pending'">
                <a class="dropdown-item" :href="`#`"
@@ -265,7 +281,7 @@
                    Disapprove
                </a>
            </li>
-   
+
            <!-- Logs -->
            <li>
                <a class="dropdown-item" href="#">
@@ -273,7 +289,7 @@
                    Logs
                </a>
            </li>
-   
+
            <!-- Remarks -->
            <li>
                <a class="dropdown-item" href="#" @click.prevent="$emit('open-remarks', row.id)">
@@ -307,47 +323,66 @@
                if (!this.$refs.dropdown?.contains(event.target)) this.isOpen = false;
            },
            changeStatus(id, newStatus) {
+                const labels = {
+                    canvassing: 'CANVASSING',
+                    approved:   'APPROVED',
+                    processed:  'PROCESSED',
+                    disapproved:'DISAPPROVED',
+                };
                 Swal.fire({
                     title: 'Are you sure?',
-                    text: `Do you want to change the status to "${newStatus}"?`,
+                    text: `Change status to "${labels[newStatus] || newStatus}"?`,
                     icon: 'question',
                     showCancelButton: true,
                     confirmButtonText: 'Yes, change it!',
                     cancelButtonText: 'Cancel',
                 }).then((result) => {
-                    if (result.isConfirmed) {
-                        axios.put(`{{ url('/inventory/procurement-request') }}/${id}/update-status`, {
-                            status: newStatus
-                        })
+                    if (!result.isConfirmed) return;
+
+                    axios.put(`{{ url('/inventory/procurement-request') }}/${id}/update-status`, { status: newStatus })
                         .then(response => {
                             const res = response.data;
-            
-                            let message = `Status updated successfully.`;
-            
-                            if (res.status === 'canvassing') {
-                                message = `Status updated to CANVASSING.<br>At: ${res.updated_at}`;
-                            } else if (res.status === 'approved') {
-                                message = `Status updated to APPROVED.<br>At: ${res.updated_at}`;
+                            let html = `Status changed to <strong>${(labels[res.status] || res.status).toUpperCase()}</strong><br><small>${res.updated_at}</small>`;
+                            if (res.pos_created > 0) {
+                                html += `<br><span class="text-success"><i class="i-Check"></i> ${res.pos_created} Purchase Order(s) created.</span>`;
                             }
-            
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Updated!',
-                                html: message.replace(/\n/g, '<br>'), // preserve line breaks
-                                showConfirmButton: true,
-                            });
-            
+                            Swal.fire({ icon: 'success', title: 'Updated!', html, showConfirmButton: true });
                             this.$emit('status-updated');
                         })
-                        .catch(error => {
-                            console.error("Error updating status:", error);
+                        .catch(() => {
+                            Swal.fire({ icon: 'error', title: 'Failed!', text: 'Failed to update status.' });
+                        });
+                });
+            },
+
+            generatePos(id) {
+                Swal.fire({
+                    title: 'Create Purchase Orders?',
+                    text: 'This will generate POs from the approved canvass entries.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, Create PO!',
+                    cancelButtonText: 'Cancel',
+                }).then(result => {
+                    if (!result.isConfirmed) return;
+
+                    axios.post(`{{ url('/inventory/procurement-request') }}/${id}/generate-pos`)
+                        .then(response => {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'POs Created!',
+                                text: response.data.message,
+                                showConfirmButton: true,
+                            });
+                            this.$emit('status-updated');
+                        })
+                        .catch(err => {
                             Swal.fire({
                                 icon: 'error',
                                 title: 'Failed!',
-                                text: 'Failed to update status.'
+                                text: err.response?.data?.message || 'Failed to create Purchase Orders.',
                             });
                         });
-                    }
                 });
             }
        },
