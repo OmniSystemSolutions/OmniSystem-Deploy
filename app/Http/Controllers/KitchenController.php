@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BranchComponent;
+use App\Models\BranchProduct;
 use App\Models\Component;
 use App\Models\InventoryDeduction;
 use App\Models\Order;
@@ -158,13 +160,44 @@ public function fetchItems(Request $request)
 ->orderBy('name')
 ->get();
 
+    $branchProducts = BranchProduct::where('branch_id', $currentBranchId)
+        ->where('status', 'active')
+        ->with(['product:id,name,code,station_id', 'product.station:id,name', 'unit:id,name'])
+        ->get()
+        ->map(fn($bp) => [
+            'id'         => $bp->id,
+            'product_id' => $bp->product_id,
+            'name'       => optional($bp->product)->name,
+            'code'       => optional($bp->product)->code,
+            'station'    => optional(optional($bp->product)->station)->name,
+            'unit'       => optional($bp->unit)->name,
+            'price'      => $bp->price,
+            'quantity'   => $bp->quantity,
+            'type'       => $bp->type,
+        ]);
 
+    $branchComponents = BranchComponent::where('branch_id', $currentBranchId)
+        ->where('status', 'active')
+        ->where('for_sale', true)
+        ->with(['component:id,name,code,unit_id', 'component.unit:id,name'])
+        ->get()
+        ->map(fn($bc) => [
+            'id'           => $bc->id,
+            'component_id' => $bc->component_id,
+            'name'         => optional($bc->component)->name,
+            'code'         => optional($bc->component)->code,
+            'unit'         => optional(optional($bc->component)->unit)->name,
+            'price'        => $bc->price,
+            'onhand'       => $bc->onhand,
+        ]);
 
     return response()->json([
-        'orderItems' => $orderItems,
-        'chefs'      => $chefs,
-        'availableOrders'=> $availableOrders,
-        'stations' => $stations,
+        'orderItems'       => $orderItems,
+        'chefs'            => $chefs,
+        'availableOrders'  => $availableOrders,
+        'stations'         => $stations,
+        'branchProducts'   => $branchProducts,
+        'branchComponents' => $branchComponents,
     ]);
 }
 

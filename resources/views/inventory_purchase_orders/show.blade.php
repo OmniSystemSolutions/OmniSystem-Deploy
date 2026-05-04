@@ -1,128 +1,151 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container-fluid">
-    <h3 class="mb-4">Create Purchase Ordering (PO)</h3>
-
-    <div class="card mb-4">
-        <div class="card-body">
-            <h5><strong>Purchase Order - {{ $purchaseOrder->po_number }}</strong></h5>
-            <p><strong>Requestor’s Name:</strong> {{ $purchaseOrder->user->name ?? 'N/A' }}</p>
-            <p><strong>Department:</strong> {{ $purchaseOrder->department ?? '-' }}</p>
-            <p><strong>PRF Reference #:</strong> {{ $purchaseOrder->prf_reference_number ?? '-' }}</p>
-            <p><strong>Proforma Reference #:</strong> {{ $purchaseOrder->proforma_reference_number ?? '-' }}</p>
-            <p><strong>Type of Request:</strong> {{ $purchaseOrder->type_of_request ?? '-' }}</p>
-            <p><strong>Origin:</strong> {{ ucfirst($purchaseOrder->select_origin) }}</p>
-            <p><strong>Date of Request:</strong> {{ $purchaseOrder->created_at->format('F d, Y') }}</p>
-            <p><strong>Time of Request:</strong> {{ $purchaseOrder->created_at->format('g:i A') }}</p>
-            <p><strong>Ship To:</strong> {{ $purchaseOrder->branch->name ?? 'N/A' }}</p>
+<div class="main-content">
+    <div>
+        <div class="breadcrumb">
+            <h1 class="mr-3">Purchase Orders</h1>
+            <ul>
+                <li><a href="{{ route('inventory_purchase_orders.index') }}">Inventory Purchase Orders</a></li>
+                <li>{{ $purchaseOrder->po_number }}</li>
+            </ul>
         </div>
+        <div class="separator-breadcrumb border-top"></div>
     </div>
 
-    <!-- Product Selection -->
-    <div class="card mb-4">
-        <div class="card-header">Select Items</div>
-        <div class="card-body">
-            <table class="table table-hover" id="componentsTable">
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" id="selectAll"></th>
-                        <th>Name</th>
-                        <th>SKU</th>
-                        <th>Supplier</th>
-                        <th>Category</th>
-                        <th>Brand</th>
-                        <th>Unit</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($components as $component)
-                    <tr>
-                        <td><input type="checkbox" class="component-checkbox" data-id="{{ $component->id }}" data-name="{{ $component->name }}" data-sku="{{ $component->code }}" data-supplier="{{ $component->supplier->supplier_name ?? 'Open' }}" data-category="{{ $component->category->name ?? 'N/A' }}" data-brand="{{ $component->brand ?? '-' }}" data-unit="{{ $component->unit }}"></td>
-                        <td>{{ $component->name }}</td>
-                        <td>{{ $component->code }}</td>
-                        <td>{{ $component->supplier->supplier_name ?? 'Open' }}</td>
-                        <td>{{ $component->category->name ?? 'N/A' }}</td>
-                        <td>{{ $component->brand ?? '-' }}</td>
-                        <td>{{ $component->unit }}</td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
+    <div class="card wrapper mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="font-weight-bold mb-0">Purchase Order — {{ $purchaseOrder->po_number }}</h5>
+            <span class="badge
+                {{ $purchaseOrder->status === 'pending'     ? 'badge-warning'   :
+                   ($purchaseOrder->status === 'approved'   ? 'badge-success'   :
+                   ($purchaseOrder->status === 'completed'  ? 'badge-primary'   :
+                   ($purchaseOrder->status === 'disapproved'? 'badge-danger'    : 'badge-secondary'))) }}
+                px-3 py-2" style="font-size:.85rem;">
+                {{ ucfirst($purchaseOrder->status) }}
+            </span>
         </div>
-    </div>
 
-    <!-- Summary -->
-    <div class="card">
-        <div class="card-header">Summary</div>
         <div class="card-body">
-            <table class="table" id="summaryTable">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>SKU</th>
-                        <th>Supplier</th>
-                        <th>Category</th>
-                        <th>Brand</th>
-                        <th>Unit</th>
-                        <th>Cost per Unit</th>
-                        <th>Qty</th>
-                        <th>Tax</th>
-                        <th>Sub-Total</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <th width="180">PO Number</th>
+                            <td>{{ $purchaseOrder->po_number }}</td>
+                        </tr>
+                        <tr>
+                            <th>Requested By</th>
+                            <td>{{ $purchaseOrder->user?->name ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Department</th>
+                            <td>{{ $purchaseOrder->department ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>PRF Reference #</th>
+                            <td>{{ $purchaseOrder->prf_reference_number ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Type of Request</th>
+                            <td>{{ $purchaseOrder->type_of_request ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Origin</th>
+                            <td>{{ $purchaseOrder->select_origin ?? '—' }}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <table class="table table-sm table-borderless">
+                        <tr>
+                            <th width="180">Supplier</th>
+                            <td>{{ $purchaseOrder->supplier?->supplier_name ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date Created</th>
+                            <td>{{ $purchaseOrder->created_at?->format('F d, Y g:i A') ?? '—' }}</td>
+                        </tr>
+                        @if($purchaseOrder->approved_at)
+                        <tr>
+                            <th>Approved By</th>
+                            <td>{{ $purchaseOrder->approvedBy?->name ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date Approved</th>
+                            <td>{{ \Carbon\Carbon::parse($purchaseOrder->approved_at)->format('F d, Y g:i A') }}</td>
+                        </tr>
+                        @endif
+                        @if($purchaseOrder->archived_at)
+                        <tr>
+                            <th>Archived By</th>
+                            <td>{{ $purchaseOrder->archivedBy?->name ?? '—' }}</td>
+                        </tr>
+                        <tr>
+                            <th>Date Archived</th>
+                            <td>{{ \Carbon\Carbon::parse($purchaseOrder->archived_at)->format('F d, Y g:i A') }}</td>
+                        </tr>
+                        @endif
+                    </table>
+                </div>
+            </div>
+
+            <h6 class="font-weight-bold mb-3">PO Items</h6>
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="thead-light">
+                        <tr>
+                            <th>Name</th>
+                            <th>SKU</th>
+                            <th>Category</th>
+                            <th>Brand</th>
+                            <th>Unit</th>
+                            <th class="text-right">Unit Cost</th>
+                            <th class="text-right">Qty</th>
+                            <th class="text-right">Sub-Total</th>
+                            <th class="text-right">Received</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($purchaseOrder->details as $detail)
+                            <tr>
+                                <td>{{ $detail->component?->name ?? '—' }}</td>
+                                <td>{{ $detail->component?->code ?? '—' }}</td>
+                                <td>{{ $detail->component?->category?->name ?? '—' }}</td>
+                                <td>{{ $detail->component?->brand ?? '—' }}</td>
+                                <td>{{ $detail->component?->unit?->name ?? '—' }}</td>
+                                <td class="text-right">₱{{ number_format($detail->unit_cost, 2) }}</td>
+                                <td class="text-right">{{ $detail->qty }}</td>
+                                <td class="text-right">₱{{ number_format($detail->sub_total, 2) }}</td>
+                                <td class="text-right">{{ $detail->received_qty ?? 0 }} / {{ $detail->qty }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">No items found.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                    @if($purchaseOrder->details->count() > 0)
+                    <tfoot>
+                        <tr>
+                            <th colspan="7" class="text-right">Grand Total</th>
+                            <th class="text-right">₱{{ number_format($purchaseOrder->details->sum('sub_total'), 2) }}</th>
+                            <th></th>
+                        </tr>
+                    </tfoot>
+                    @endif
+                </table>
+            </div>
+
+            <div class="mt-3">
+                <a href="{{ route('inventory_purchase_orders.index') }}" class="btn btn-outline-secondary">
+                    <i class="i-Arrow-Left mr-1"></i> Back to List
+                </a>
+                <a href="{{ route('inventory_purchase_orders.edit', $purchaseOrder->id) }}" class="btn btn-warning ml-2">
+                    <i class="i-Edit mr-1"></i> Edit
+                </a>
+            </div>
         </div>
     </div>
 </div>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const checkboxes = document.querySelectorAll('.component-checkbox');
-    const summaryBody = document.querySelector('#summaryTable tbody');
-    const selectAll = document.getElementById('selectAll');
-
-    selectAll.addEventListener('change', () => {
-        checkboxes.forEach(cb => {
-            cb.checked = selectAll.checked;
-            cb.dispatchEvent(new Event('change'));
-        });
-    });
-
-    checkboxes.forEach(cb => {
-        cb.addEventListener('change', function() {
-            if (this.checked) {
-                const row = `
-                    <tr data-id="${this.dataset.id}">
-                        <td>${this.dataset.name}</td>
-                        <td>${this.dataset.sku}</td>
-                        <td>${this.dataset.supplier}</td>
-                        <td>${this.dataset.category}</td>
-                        <td>${this.dataset.brand}</td>
-                        <td>${this.dataset.unit}</td>
-                        <td><input type="number" class="form-control cost" value="0"></td>
-                        <td><input type="number" class="form-control qty" value="1"></td>
-                        <td class="tax">₱0.00</td>
-                        <td class="subtotal">₱0.00</td>
-                        <td><button class="btn btn-danger btn-sm remove-row">Remove</button></td>
-                    </tr>`;
-                summaryBody.insertAdjacentHTML('beforeend', row);
-            } else {
-                summaryBody.querySelector(`tr[data-id="${this.dataset.id}"]`)?.remove();
-            }
-        });
-    });
-
-    // Remove row
-    summaryBody.addEventListener('click', e => {
-        if (e.target.classList.contains('remove-row')) {
-            const id = e.target.closest('tr').dataset.id;
-            document.querySelector(`.component-checkbox[data-id="${id}"]`).checked = false;
-            e.target.closest('tr').remove();
-        }
-    });
-});
-</script>
 @endsection

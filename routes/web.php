@@ -329,6 +329,7 @@ Route::put('/customers/{customer}/restore', [CustomerController::class, 'restore
 
 Route::get('/inventory-purchase-orders', [InventoryPurchaseOrderController::class, 'index'])->name('inventory_purchase_orders.index');
 Route::get('/inventory-purchase-orders/create', [InventoryPurchaseOrderController::class, 'create'])->name('inventory_purchase_orders.create');
+Route::get('/inventory-purchase-orders/{id}', [InventoryPurchaseOrderController::class, 'show'])->name('inventory_purchase_orders.show');
 Route::post('/inventory-purchase-orders', [InventoryPurchaseOrderController::class, 'store'])->name('inventory_purchase_orders.store');
 Route::get('/inventory-purchase-orders/{purchaseOrder}/edit', [InventoryPurchaseOrderController::class, 'edit'])->name('inventory_purchase_orders.edit');
 Route::put('/inventory-purchase-orders/{purchaseOrder}', [InventoryPurchaseOrderController::class, 'update'])->name('inventory_purchase_orders.update');
@@ -348,6 +349,8 @@ Route::put('/inventory/purchase-orders/{id}/archive', [InventoryPurchaseOrderCon
     ->name('inventory_purchase_orders.archive');
 // Route::get('/inventory/purchase-orders/{id}/log-stocks', [InventoryPurchaseOrderController::class, 'logStocks']);
 Route::post('/inventory/purchase-orders/{id}/log-stocks', [InventoryPurchaseOrderController::class, 'storeLogStocks']);
+Route::post('/inventory/purchase-orders/{id}/add-to-inventory', [InventoryPurchaseOrderController::class, 'addToInventory'])
+    ->name('inventory_purchase_orders.add_to_inventory');
 
 Route::get('/inventory/audits', [InventoryAuditController::class, 'index'])->name('inventory_audit.index');
 Route::get('/inventory/audits/fetch', [InventoryAuditController::class, 'fetchAudits'])->name('inventory_audit.fetch');

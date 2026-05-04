@@ -13,7 +13,6 @@
     <div class="separator-breadcrumb border-top"></div>
 
     <div class="card">
-        <div id="branch-permissions-list">
         <div class="card-header p-0">
             <ul class="nav nav-tabs card-header-tabs" id="userCreateTabs" role="tablist">
                 <li class="nav-item">
@@ -275,36 +274,36 @@
                                 </div>
                             </div>
 
-                    <div class="col-md-4">
+                            <div class="col-md-4">
                                 <div class="form-group text-center">
                                     <label>Photo</label>
 
-                                    <label 
-                                for="image"
-                                id="drop-area"
-                                class="upload-box text-center p-3 border rounded d-block"
-                                style="cursor:pointer;"
-                            >
-                                <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-muted"></i>
-                                <p class="text-muted">
-                                    Drag & Drop an image<br>
-                                    <strong>or click to select</strong>
-                                </p>
+                                    <label
+                                        for="image"
+                                        id="drop-area"
+                                        class="upload-box text-center p-3 border rounded d-block"
+                                        style="cursor:pointer;"
+                                    >
+                                        <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-muted"></i>
+                                        <p class="text-muted">
+                                            Drag & Drop an image<br>
+                                            <strong>or click to select</strong>
+                                        </p>
 
-                                <input 
-                                    type="file" 
-                                    id="image" 
-                                    name="image" 
-                                    class="d-none" 
-                                    accept="image/*"
-                                >
+                                        <input
+                                            type="file"
+                                            id="image"
+                                            name="image"
+                                            class="d-none"
+                                            accept="image/*"
+                                        >
 
-                                <div id="preview-container" class="mt-3"></div>
-                            </label>
+                                        <div id="preview-container" class="mt-3"></div>
+                                    </label>
                                 </div>
                             </div>
+                        </div>
                     </div>
-                </div>
 
                     <!-- Access Credentials -->
                     <div class="tab-pane fade" id="access" role="tabpanel" aria-labelledby="access-tab">
@@ -328,43 +327,43 @@
 
                             </div>
 
-                         <div class="col-md-6">
-    <h6>Branch Roles</h6>
-    <p class="text-muted">Assign one or more roles per branch (select role names).</p>
+                            <div class="col-md-6">
+                                <h6>Branch Roles</h6>
+                                <p class="text-muted">Assign one or more roles per branch (select role names).</p>
 
-    <div id="branch-permissions-list">
-        <div class="branch-permission-row form-row align-items-center mb-2">
-            <div class="col-md-5">
-                <select name="branch_permissions[0][branch_id]" class="form-control">
-                    <option value="">Select branch</option>
-                    @foreach($branches as $branch)
-                        <option value="{{ $branch->id }}">{{ $branch->name }}</option>
-                    @endforeach
-                </select>
-            </div>
+                                <div id="branch-permissions-list">
+                                    <div class="branch-permission-row form-row align-items-center mb-2">
+                                        <div class="col-md-5">
+                                            <select name="branch_permissions[0][branch_id]" class="form-control">
+                                                <option value="">Select branch</option>
+                                                @foreach($branches as $branch)
+                                                    <option value="{{ $branch->id }}">{{ $branch->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
 
-            <div class="col-md-6">
-                <select
-                    name="branch_permissions[0][permissions][]"
-                    class="form-control"
-                    multiple
-                >
-                    @foreach($roles as $role)
-                        <option value="{{ $role->id }}">{{ $role->name }}</option>
-                    @endforeach
-                </select>
-            </div>
+                                        <div class="col-md-6">
+                                            <select
+                                                name="branch_permissions[0][permissions][]"
+                                                class="form-control"
+                                                multiple
+                                            >
+                                                @foreach($roles as $role)
+                                                    <option value="{{ $role->id }}">{{ $role->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        </div>
 
-            <div class="col-md-1">
-                <button type="button" class="btn btn-sm btn-outline-danger remove-branch">-</button>
-            </div>
-        </div>
-    </div>
+                                        <div class="col-md-1">
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-branch">-</button>
+                                        </div>
+                                    </div>
+                                </div>
 
-    <button type="button" id="add-branch-permission" class="btn btn-sm btn-outline-primary">
-        Add branch
-    </button>
-</div>
+                                <button type="button" id="add-branch-permission" class="btn btn-sm btn-outline-primary">
+                                    Add branch
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -435,28 +434,27 @@
                                     </div>
                                     <div class="row">
                                         {{-- <div class="col-md-3 form-group"><label>Supervisor (user id)</label><input type="number" id="wi_supervisor" class="form-control" placeholder="Supervisor id"></div> --}}
-<div class="col-md-3 form-group">
-    <label>Supervisor</label>
-    <select id="wi_supervisor" name="wi_supervisor" class="form-control">
-        <option value="">No Supervisor / Not Applicable</option>
-        
-        @foreach($potentialSupervisors as $supervisor)
-            @php
-                // Get the highest/most recent designation for this supervisor
-                $latestDesignation = $supervisor->employeeWorkInformations->first()?->designation?->name ?? '';
-            @endphp
-            
-            <option value="{{ $supervisor->username }}"
-                    data-designation="{{ strtolower($latestDesignation) }}"
-                    {{ old('wi_supervisor') === $supervisor->username ? 'selected' : '' }}>
-                {{ $supervisor->name ?? $supervisor->username }}
-                <small class="text-muted">
-                    ({{ $supervisor->username }} • {{ $latestDesignation ?: '—' }})
-                </small>
-            </option>
-        @endforeach
-    </select>
-</div>
+                                        <div class="col-md-3 form-group">
+                                            <label>Supervisor</label>
+                                            <select id="wi_supervisor" name="wi_supervisor" class="form-control">
+                                                <option value="">No Supervisor / Not Applicable</option>
+
+                                                @foreach($potentialSupervisors as $supervisor)
+                                                    @php
+                                                        $latestDesignation = $supervisor->employeeWorkInformations->first()?->designation?->name ?? '';
+                                                    @endphp
+
+                                                    <option value="{{ $supervisor->username }}"
+                                                            data-designation="{{ strtolower($latestDesignation) }}"
+                                                            {{ old('wi_supervisor') === $supervisor->username ? 'selected' : '' }}>
+                                                        {{ $supervisor->name ?? $supervisor->username }}
+                                                        <small class="text-muted">
+                                                            ({{ $supervisor->username }} • {{ $latestDesignation ?: '—' }})
+                                                        </small>
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
                                         <div class="col-md-3 form-group"><label>Monthly Rate</label><input type="number" step="0.01" id="wi_monthly_rate" class="form-control"></div>
                                         <div class="col-md-3 form-group"><label>Daily Rate</label><input type="number" step="0.01" id="wi_daily_rate" class="form-control"></div>
                                         <div class="col-md-3 form-group"><label>Hourly Rate</label><input type="number" step="0.01" id="wi_hourly_rate" class="form-control"></div>
@@ -472,14 +470,14 @@
                                 <h6>Salary Method</h6>
                                 <div class="row mb-3">
                                     <div class="col-md-2 form-group">
-                                            <label>Salary Method</label>
-                                            <select name="salary_method[method_id]" class="form-control">
-                                                <option value="">Select Method</option>
-                                                @foreach($salaryMethods as $key => $label)
-                                                    <option value="{{ $key }}">{{ $label }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
+                                        <label>Salary Method</label>
+                                        <select name="salary_method[method_id]" class="form-control">
+                                            <option value="">Select Method</option>
+                                            @foreach($salaryMethods as $key => $label)
+                                                <option value="{{ $key }}">{{ $label }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
                                     <div class="col-md-2 form-group">
                                         <label>Salary Period</label>
                                         <select name="salary_method[period_id]" class="form-control">
@@ -494,516 +492,510 @@
                                         <input type="text" name="salary_method[account]" class="form-control">
                                     </div>
 
-<!-- Shift Template Selector (remains outside the modal) -->
-<div class="col-md-2 form-group">
-    <label class="fw-bold">Shift Template (Optional)</label>
-    <select id="shift_select" class="form-control mb-2">
-        <option value="">No template / Custom only</option>
-        @foreach($shifts as $shift)
-            <option value="{{ $shift->id }}"
-                    data-shift='@json($shift)'
-                    {{ old('salary_method.shift_id', isset($user) && $user->salaryMethod ? $user->salaryMethod->shift_id : null) == $shift->id ? 'selected' : '' }}>
-                {{ $shift->name }}
-            </option>
-        @endforeach
-    </select>
+                                    <!-- Shift Template Selector (remains outside the modal) -->
+                                    <div class="col-md-2 form-group">
+                                        <label class="fw-bold">Shift Template (Optional)</label>
+                                        <select id="shift_select" class="form-control mb-2">
+                                            <option value="">No template / Custom only</option>
+                                            @foreach($shifts as $shift)
+                                                <option value="{{ $shift->id }}"
+                                                        data-shift='@json($shift)'
+                                                        {{ old('salary_method.shift_id', isset($user) && $user->salaryMethod ? $user->salaryMethod->shift_id : null) == $shift->id ? 'selected' : '' }}>
+                                                    {{ $shift->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
 
-    <!-- Hidden field to submit the selected template -->
-    <input type="hidden" name="salary_method[shift_id]" id="assigned_shift_id"
-        value="{{ old('salary_method.shift_id', isset($user) && $user->salaryMethod ? $user->salaryMethod->shift_id : null) }}">
+                                        <!-- Hidden field to submit the selected template -->
+                                        <input type="hidden" name="salary_method[shift_id]" id="assigned_shift_id"
+                                            value="{{ old('salary_method.shift_id', isset($user) && $user->salaryMethod ? $user->salaryMethod->shift_id : null) }}">
 
-    <!-- Small helper text -->
-    <small class="text-muted">Select a template to customize times and view schedule.</small>
-</div>
-
-<!-- Custom Shift Modal -->
-<div class="modal fade" id="shiftModal" tabindex="-1" role="dialog" aria-labelledby="shiftModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title fw-bold" id="shiftModalLabel">
-                    <span id="modal-shift-name">Custom Shift Settings</span>
-                </h5>
-                <button type="button" class="close btn-close" data-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-
-                <!-- NOTE: visible Custom Shift Schedule inputs removed. We store aggregated
-                     values into hidden inputs below when the modal is saved. -->
-                <input type="hidden" name="salary_method[custom_time_start]" id="custom_time_start_input" value="{{ old('salary_method.custom_time_start', isset($user) && $user->salaryMethod ? $user->salaryMethod->custom_time_start : '') }}">
-                <input type="hidden" name="salary_method[custom_time_end]" id="custom_time_end_input" value="{{ old('salary_method.custom_time_end', isset($user) && $user->salaryMethod ? $user->salaryMethod->custom_time_end : '') }}">
-                <input type="hidden" name="salary_method[custom_break_start]" id="custom_break_start_input" value="{{ old('salary_method.custom_break_start', isset($user) && $user->salaryMethod ? $user->salaryMethod->custom_break_start : '') }}">
-                <input type="hidden" name="salary_method[custom_break_end]" id="custom_break_end_input" value="{{ old('salary_method.custom_break_end', isset($user) && $user->salaryMethod ? $user->salaryMethod->custom_break_end : '') }}">
-
-                <!-- Hidden arrays for per-date selections (populated by JS on Save) -->
-                <input type="hidden" name="salary_method[custom_work_days]" id="custom_work_days_input" value="{{ old('salary_method.custom_work_days', isset($user) && $user->salaryMethod ? json_encode($user->salaryMethod->custom_work_days ?? []) : '[]') }}">
-                <input type="hidden" name="salary_method[custom_rest_days]" id="custom_rest_days_input" value="{{ old('salary_method.custom_rest_days', isset($user) && $user->salaryMethod ? json_encode($user->salaryMethod->custom_rest_days ?? []) : '[]') }}">
-                <input type="hidden" name="salary_method[custom_open_time]" id="custom_open_time_input" value="{{ old('salary_method.custom_open_time', isset($user) && $user->salaryMethod ? json_encode($user->salaryMethod->custom_open_time ?? []) : '[]') }}">
-
-                <!-- Which shift id the saved custom blob belongs to (client-side helper + submitted) -->
-                <input type="hidden" name="salary_method[custom_for_shift_id]" id="custom_for_shift_input" value="{{ old('salary_method.custom_for_shift_id', isset($user) && $user->salaryMethod ? $user->salaryMethod->custom_for_shift_id : '') }}">
-
-                <!-- Preview Card -->
-                <div class="card mt-4">
-                    <div class="card-body">
-                        <h6 class="fw-bold mb-4">Current Shift Preview</h6>
-
-                        <!-- Time Preview -->
-                        <div class="row mb-4">
-                            <div class="col-md-3">
-                                <strong>Start:</strong> <span id="pv-start" class="text-primary fw-bold">-</span>
-                            </div>
-                            <div class="col-md-3">
-                                <strong>End:</strong> <span id="pv-end" class="text-primary fw-bold">-</span>
-                            </div>
-                            <div class="col-md-3">
-                                <strong>Break Start:</strong> <span id="pv-break-start" class="text-primary fw-bold">-</span>
-                            </div>
-                            <div class="col-md-3">
-                                <strong>Break End:</strong> <span id="pv-break-end" class="text-primary fw-bold">-</span>
-                            </div>
-                        </div>
-
-                        
-                        <!-- Preset date range for template schedule -->
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label>Preset Schedule Start</label>
-                                <input type="date" id="preset_start" name="salary_method[preset_start]" class="form-control" value="{{ old('salary_method.preset_start') }}">
-                            </div>
-                            <div class="col-md-6">
-                                <label>Preset Schedule End</label>
-                                <input type="date" id="preset_end" name="salary_method[preset_end]" class="form-control" value="{{ old('salary_method.preset_end') }}">
-                            </div>
-                        </div>
-
-                        <!-- Generated per-date schedule preview -->
-                        <div id="preset-dates-list" class="mb-3">
-                            <!-- JS will render date cards here -->
-                        </div>
-
-
-                        <!-- NOTE: Weekly schedule removed. Per-date options (Work Day / Rest Day / Open Time)
-                             are rendered under each preset date card below the time inputs. -->
-
-                    </div>
-                </div>
-            </div>
-
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="button" id="apply-preset-btn" class="btn btn-primary mr-2">Apply</button>
-                <button type="button" id="save-shift-modal-btn" class="btn btn-primary">Save Changes</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-                                </div>
-
-                      <h6 class="mt-3">Allowances</h6>
-
-                      <div class="row mb-2 fw-bold small text-muted">
-    <div class="col-md-5 ps-3 mt-3">
-            </div>
-    <h6>Amount</h6>
-
-    <div class="col-md-3 col-lg-2"></div> <!-- space for remove button -->
-</div>
-<div id="allowances-list">
-    @foreach($allowances as $i => $al)
-    <div class="form-row align-items-center mb-2 allowance-row">
-        <!-- Checkbox + Allowance name -->
-        <div class="col-md-5">
-            <div class="form-check">
-                <input
-                    class="form-check-input allowance-checkbox"
-                    type="checkbox"
-
-                    name="allowances[{{ $i }}][allowance_id]"
-                    value="{{ $al->id }}"
-                    id="allowance_{{ $al->id }}"
-                >
-                <label class="form-check-label" for="allowance_{{ $al->id }}">
-                    {{ $al->name }}
-                </label>
-            </div>
-        </div>
-@push('styles')
-<style>
-.permission-select {
-    height: 120px; /* controls the ugly tall box */
-}
-</style>
-@endpush
-
-    <!-- Amount with + / - buttons (orange background) -->
-
-    <div class="col-md-1">
-        <div class="input-group">
-            <input
-                type="number"
-                name="allowances[{{ $i }}][amount]"
-                class="form-control allowance-amount text-center"
-                placeholder="Enter Amount Here"
-                step="100"
-                min="0"
-                value="{{ old("allowances.$i.amount") }}"
-                disabled
-            >
-        </div>
-    </div>
-
-        <!-- Remove -->
-        {{-- <div class="col-md-1">
-            <button type="button" class="btn btn-sm btn-outline-danger remove-allowance">
-                Remove
-            </button>
-        </div> --}}
-    </div>
-    @endforeach
-</div>
-
-<h6 class="mt-5 mb-3">Leaves</h6>
-
-<!-- Header -->
-<div class="row fw-bold small text-secondary mb-2">
-    <div class="col-md-5 ps-1">Leave Type</div>
-    <div class="col-md-2 text-center">Leave Credits</div>
-    <div class="col-md-2 text-center">Used Leaves</div>
-    <div class="col-md-2 text-center">Leave Balance</div>
-    <div class="col-md-1 text-center">Action</div>
-</div>
-
-<div id="leaves-list">
-    @foreach($leaves as $i => $lv)
-    <div class="leave-row row align-items-center py-2 border-bottom" data-leave-id="{{ $lv->id }}">
-
-        <!-- Leave Type -->
-        <div class="col-md-5">
-            <div class="form-check">
-                <input class="form-check-input leave-checkbox" type="checkbox"
-                        name="leaves[{{ $i }}][leave_id]" value="{{ $lv->id }}" id="leave_{{ $lv->id }}"
-                        {{ old("leaves.$i.assigned_days") ? 'checked' : '' }}>
-                <label class="form-check-label" for="leave_{{ $lv->id }}">{{ $lv->name }}</label>
-            </div>
-        </div>
-
-        <!-- Credits -->
-        {{-- <div class="col-md-2 text-center text-muted">
-            <span class="leave-credits">0</span>
-            <input type="hidden" name="leaves[{{ $i }}][assigned_days]"
-                class="leave-days leave-credits-input"
-                value="{{ old("leaves.$i.assigned_days", 0) }}">
-        </div> --}}
-
-        <div class="col-md-2 text-center text-muted">
-            <span class="leave-credits">0</span>
-            {{-- No hidden input here at all — JS adds it dynamically only when assigned --}}
-        </div>
-
-        <!-- Used -->
-        <div class="col-md-2 text-center text-muted">
-            <span class="leave-used">0</span>
-        </div>
-
-        <!-- Balance -->
-        <div class="col-md-2 text-center fw-medium">
-            <span class="leave-balance">0</span>
-        </div>
-
-        <!-- Action -->
-        <div class="col-md-1 text-center">
-            <div class="dropdown">
-                <button class="btn btn-sm btn-link text-secondary p-0" type="button"
-                        data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-ellipsis-v fa-sm"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                    <li>
-                        <a class="dropdown-item assign-leave-inline" href="javascript:void(0)"
-                           data-leave-id="{{ $lv->id }}"
-                           data-leave-name="{{ $lv->name }}">
-                            Assign Leave
-                        </a>
-                    </li>
-                     <li>
-    <a class="dropdown-item" href="javascript:void(0)"
-       onclick="openLeaveHistory('{{ $lv->id }}', '{{ addslashes($lv->name) }}')">
-        Leave History
-    </a>
-</li>
-                    <!-- You can add Leave History here later -->
-                </ul>
-            </div>
-        </div>
-    </div>
-
-    <!-- Inline assign form (hidden by default) -->
-<div id="assign-form-{{ $lv->id }}"
-     class="assign-leave-form row bg-white border border-secondary-subtle p-3 rounded-3 shadow-sm d-none"
-     data-leave-id="{{ $lv->id }}">
-
-    <div class="col-12 mb-3">
-        <h6 class="mb-0 fw-semibold text-dark">
-            Assign Leave to: {{ $lv->name }}
-        </h6>
-    </div>
-
-    <div class="col-md-4 mb-3">
-        <label class="form-label small fw-medium text-muted mb-1 d-block">
-            Number of days
-        </label>
-        <input type="number"
-               class="form-control form-control-sm"
-               id="assign-days-{{ $lv->id }}"
-               min="1"
-               value="1"
-               required>
-    </div>
-
-    <div class="col-md-4 mb-3">
-        <label class="form-label small fw-medium text-muted mb-1 d-block">
-            Effective Date (optional)
-        </label>
-        <input type="date"
-               class="form-control form-control-sm"
-               id="assign-date-{{ $lv->id }}">
-    </div>
-
-    <div class="col-md-4 mb-3 d-flex align-items-end gap-2">
-        <button type="button"
-                class="btn btn-sm btn-primary px-4 save-assign-leave"
-                data-leave-id="{{ $lv->id }}">
-            Save
-        </button>
-        <button type="button"
-                class="btn btn-sm btn-outline-secondary px-4 cancel-assign-leave"
-                data-leave-id="{{ $lv->id }}">
-            Cancel
-        </button>
-    </div>
-</div>
-    @endforeach
-</div>
-
-<!-- ===================== LEAVE HISTORY MODAL ===================== -->
-<div class="modal fade" id="leaveHistoryModal" tabindex="-1" role="dialog" aria-labelledby="leaveHistoryModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content border-0 shadow">
-
-            <div class="modal-header" style="background:#f8f9fa; border-bottom:2px solid #dee2e6;">
-                <h5 class="modal-title fw-bold text-dark" id="leaveHistoryModalLabel">
-                    <i class="fas fa-history me-2 text-primary"></i>
-                    Leave History &mdash; <span id="lh-leave-name" class="text-primary"></span>
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
-                        data-dismiss="modal">&times;</button>
-            </div>
-
-            <div class="modal-body px-4 py-3">
-
-                <!-- Loading spinner -->
-                <div id="lh-loading" class="text-center py-4">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <p class="text-muted mt-2">Loading leave history...</p>
-                </div>
-
-                <!-- Content (shown after load) -->
-                <div id="lh-content" style="display:none;">
-
-                    <!-- ── Leave Credit ── -->
-                    <h6 class="fw-bold text-uppercase text-dark mb-2" style="letter-spacing:.5px;">
-                        Leave Credit
-                    </h6>
-                    <div class="table-responsive mb-1">
-                        <table class="table table-sm table-bordered mb-0" id="lh-credit-table">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Date Assigned</th>
-                                    <th class="text-center">Assigned Leaves</th>
-                                    <th>Reference #</th>
-                                </tr>
-                            </thead>
-                            <tbody id="lh-credit-body">
-                                <!-- JS fills this -->
-                            </tbody>
-                            <tfoot>
-                                <tr class="fw-bold">
-                                    <td>Total</td>
-                                    <td class="text-center" id="lh-credit-total">0</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    <!-- ── Leave Usage ── -->
-                    <h6 class="fw-bold text-uppercase text-dark mb-2 mt-4" style="letter-spacing:.5px;">
-                        Leave Usage
-                    </h6>
-                    <div class="table-responsive mb-1">
-                        <table class="table table-sm table-bordered mb-0" id="lh-usage-table">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Date of Leave</th>
-                                    <th class="text-center">No of Days</th>
-                                    <th>Reference #</th>
-                                </tr>
-                            </thead>
-                            <tbody id="lh-usage-body">
-                                <!-- JS fills this -->
-                            </tbody>
-                            <tfoot>
-                                <tr class="fw-bold">
-                                    <td>Total</td>
-                                    <td class="text-center" id="lh-usage-total">0</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-
-                    <!-- ── Leave Balance ── -->
-                    <div class="mt-3 ps-1">
-                        <span class="fw-bold text-danger fs-6">Leave Balance &nbsp;&nbsp;
-                            <span id="lh-balance" class="fw-bold">0</span>
-                        </span>
-                    </div>
-
-                </div><!-- /#lh-content -->
-
-                <!-- Empty state -->
-                <div id="lh-empty" style="display:none;" class="text-center text-muted py-4">
-                    <i class="fas fa-folder-open fa-2x mb-2"></i>
-                    <p>No leave history found for this employee.</p>
-                </div>
-
-            </div><!-- /.modal-body -->
-
-            <div class="modal-footer" style="background:#f8f9fa;">
-                <button type="button" class="btn btn-secondary btn-sm"
-                        data-bs-dismiss="modal" data-dismiss="modal">Close</button>
-            </div>
-
-        </div>
-    </div>
-</div>
-<!-- =================== END LEAVE HISTORY MODAL =================== -->
-
-
-                            </div>
-                        </div>
-                    </div>
-
-                   <!-- Educational Background -->
-<div class="tab-pane fade" id="educ" role="tabpanel" aria-labelledby="educ-tab">
-    <div class="card">
-        <div class="card-body">
-            <h6>Educational Background</h6>
-
-            <!-- Table-like header row -->
-            <div class="row fw-bold mb-2">
-                <div class="col-md-5">Name of School*</div>
-                <div class="col-md-2">Level*</div>
-                <div class="col-md-2">From</div>
-                <div class="col-md-2">To</div>
-                <div class="col-md-1"></div> <!-- empty space for remove button -->
-            </div>
-
-            <div id="educ-bg-list">
-                <div class="educ-row row mb-2">
-                    <div class="col-md-5"><input type="text" name="educational_backgrounds[0][name_of_school]" class="form-control" placeholder="Name of school"></div>
-                    <div class="col-md-2">
-                        <select name="educational_backgrounds[0][level]" class="form-control">
-                            <option value="">Select Level</option>
-                            <option value="Elementary">Elementary</option>
-                            <option value="High School">High School</option>
-                            <option value="Vocational">Vocational</option>
-                            <option value="College">College</option>
-                            <option value="Graduate">Graduate</option>
-                            <option value="Post Graduate">Post Graduate</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2"><input type="date" name="educational_backgrounds[0][tenure_start]" class="form-control" placeholder="From"></div>
-                    <div class="col-md-2"><input type="date" name="educational_backgrounds[0][tenure_end]" class="form-control" placeholder="To"></div>
-                    <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger remove-educ">-</button></div>
-                </div>
-            </div>
-            <button type="button" id="add-educ" class="btn btn-sm btn-outline-primary mb-4">Add education</button>
-
-            <!-- Attachments - ONLY IN EDUCATIONAL BACKGROUND TAB -->
-            <div class="card mt-4 border-orange">
-                <div class="card-body">
-                    <h6 class="mb-4 text-orange">Attachments</h6>
-                    <div id="attachments-list">
-                        @php
-                            $commonAttachments = [
-                                'Birth Certificate',
-                                'Valid ID',
-                                'Marriage Contract',
-                                'Health Card',
-                                'NBI',
-                                'Resume',
-                                'Location Sketch',
-                                '2x2',
-                                'Police Clearance',
-                                'police clearance',
-                                'NBI',
-                                'GSIS',
-                                'HMO',
-                            ];
-                        @endphp
-
-                        @foreach($commonAttachments as $index => $name)
-                        <div class="attachment-row row align-items-center mb-3">
-                            <div class="col-md-4">
-                                <div class="form-check">
-                                    <input 
-                                        class="form-check-input attachment-checkbox" 
-                                        type="checkbox" 
-                                        id="attach_{{ $index }}"
-                                        value="{{ $name }}"
-                                    >
-                                    <label class="form-check-label" for="attach_{{ $index }}">
-                                        {{ $name }}
-                                    </label>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="input-group">
-                                    <div class="custom-file">
-                                        <input 
-                                            type="file" 
-                                            class="custom-file-input attachment-file" 
-                                            name="attachments[{{ $index }}]"
-                                            id="file_{{ $index }}"
-                                            accept=".pdf,.jpg,.jpeg,.png"
-                                            disabled
-                                        >
-                                        <label class="custom-file-label text-truncate" for="file_{{ $index }}">
-                                            Choose file...
-                                        </label>
+                                        <!-- Small helper text -->
+                                        <small class="text-muted">Select a template to customize times and view schedule.</small>
                                     </div>
                                 </div>
-                                <!-- Hidden input to store the name -->
-                                <input type="hidden" name="attachment_names[{{ $index }}]" class="attachment-name" value="{{ $name }}" disabled>
-                            </div>
-                            <div class="col-md-2 text-right">
-                                <button type="button" class="btn btn-sm btn-danger remove-attachment" disabled>
-                                    Remove
-                                </button>
+
+                                <!-- Custom Shift Modal -->
+                                <div class="modal fade" id="shiftModal" tabindex="-1" role="dialog" aria-labelledby="shiftModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg" role="document">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title fw-bold" id="shiftModalLabel">
+                                                    <span id="modal-shift-name">Custom Shift Settings</span>
+                                                </h5>
+                                                <button type="button" class="close btn-close" data-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+
+                                                <!-- NOTE: visible Custom Shift Schedule inputs removed. We store aggregated
+                                                     values into hidden inputs below when the modal is saved. -->
+                                                <input type="hidden" name="salary_method[custom_time_start]" id="custom_time_start_input" value="{{ old('salary_method.custom_time_start', isset($user) && $user->salaryMethod ? $user->salaryMethod->custom_time_start : '') }}">
+                                                <input type="hidden" name="salary_method[custom_time_end]" id="custom_time_end_input" value="{{ old('salary_method.custom_time_end', isset($user) && $user->salaryMethod ? $user->salaryMethod->custom_time_end : '') }}">
+                                                <input type="hidden" name="salary_method[custom_break_start]" id="custom_break_start_input" value="{{ old('salary_method.custom_break_start', isset($user) && $user->salaryMethod ? $user->salaryMethod->custom_break_start : '') }}">
+                                                <input type="hidden" name="salary_method[custom_break_end]" id="custom_break_end_input" value="{{ old('salary_method.custom_break_end', isset($user) && $user->salaryMethod ? $user->salaryMethod->custom_break_end : '') }}">
+
+                                                <!-- Hidden arrays for per-date selections (populated by JS on Save) -->
+                                                <input type="hidden" name="salary_method[custom_work_days]" id="custom_work_days_input" value="{{ old('salary_method.custom_work_days', isset($user) && $user->salaryMethod ? json_encode($user->salaryMethod->custom_work_days ?? []) : '[]') }}">
+                                                <input type="hidden" name="salary_method[custom_rest_days]" id="custom_rest_days_input" value="{{ old('salary_method.custom_rest_days', isset($user) && $user->salaryMethod ? json_encode($user->salaryMethod->custom_rest_days ?? []) : '[]') }}">
+                                                <input type="hidden" name="salary_method[custom_open_time]" id="custom_open_time_input" value="{{ old('salary_method.custom_open_time', isset($user) && $user->salaryMethod ? json_encode($user->salaryMethod->custom_open_time ?? []) : '[]') }}">
+
+                                                <!-- Which shift id the saved custom blob belongs to (client-side helper + submitted) -->
+                                                <input type="hidden" name="salary_method[custom_for_shift_id]" id="custom_for_shift_input" value="{{ old('salary_method.custom_for_shift_id', isset($user) && $user->salaryMethod ? $user->salaryMethod->custom_for_shift_id : '') }}">
+
+                                                <!-- Preview Card -->
+                                                <div class="card mt-4">
+                                                    <div class="card-body">
+                                                        <h6 class="fw-bold mb-4">Current Shift Preview</h6>
+
+                                                        <!-- Time Preview -->
+                                                        <div class="row mb-4">
+                                                            <div class="col-md-3">
+                                                                <strong>Start:</strong> <span id="pv-start" class="text-primary fw-bold">-</span>
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <strong>End:</strong> <span id="pv-end" class="text-primary fw-bold">-</span>
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <strong>Break Start:</strong> <span id="pv-break-start" class="text-primary fw-bold">-</span>
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <strong>Break End:</strong> <span id="pv-break-end" class="text-primary fw-bold">-</span>
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Preset date range for template schedule -->
+                                                        <div class="row mb-3">
+                                                            <div class="col-md-6">
+                                                                <label>Preset Schedule Start</label>
+                                                                <input type="date" id="preset_start" name="salary_method[preset_start]" class="form-control" value="{{ old('salary_method.preset_start') }}">
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <label>Preset Schedule End</label>
+                                                                <input type="date" id="preset_end" name="salary_method[preset_end]" class="form-control" value="{{ old('salary_method.preset_end') }}">
+                                                            </div>
+                                                        </div>
+
+                                                        <!-- Generated per-date schedule preview -->
+                                                        <div id="preset-dates-list" class="mb-3">
+                                                            <!-- JS will render date cards here -->
+                                                        </div>
+
+                                                        <!-- NOTE: Weekly schedule removed. Per-date options (Work Day / Rest Day / Open Time)
+                                                             are rendered under each preset date card below the time inputs. -->
+
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                                <button type="button" id="apply-preset-btn" class="btn btn-primary mr-2">Apply</button>
+                                                <button type="button" id="save-shift-modal-btn" class="btn btn-primary">Save Changes</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h6 class="mt-3">Allowances</h6>
+
+                                <div class="row mb-2 fw-bold small text-muted">
+                                    <div class="col-md-5 ps-3 mt-3">
+                                    </div>
+                                    <h6>Amount</h6>
+                                    <div class="col-md-3 col-lg-2"></div>
+                                </div>
+                                <div id="allowances-list">
+                                    @foreach($allowances as $i => $al)
+                                    <div class="form-row align-items-center mb-2 allowance-row">
+                                        <!-- Checkbox + Allowance name -->
+                                        <div class="col-md-5">
+                                            <div class="form-check">
+                                                <input
+                                                    class="form-check-input allowance-checkbox"
+                                                    type="checkbox"
+                                                    name="allowances[{{ $i }}][allowance_id]"
+                                                    value="{{ $al->id }}"
+                                                    id="allowance_{{ $al->id }}"
+                                                >
+                                                <label class="form-check-label" for="allowance_{{ $al->id }}">
+                                                    {{ $al->name }}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        @push('styles')
+                                        <style>
+                                        .permission-select {
+                                            height: 120px;
+                                        }
+                                        </style>
+                                        @endpush
+
+                                        <!-- Amount with + / - buttons (orange background) -->
+                                        <div class="col-md-1">
+                                            <div class="input-group">
+                                                <input
+                                                    type="number"
+                                                    name="allowances[{{ $i }}][amount]"
+                                                    class="form-control allowance-amount text-center"
+                                                    placeholder="Enter Amount Here"
+                                                    step="100"
+                                                    min="0"
+                                                    value="{{ old("allowances.$i.amount") }}"
+                                                    disabled
+                                                >
+                                            </div>
+                                        </div>
+
+                                        {{-- <div class="col-md-1">
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-allowance">
+                                                Remove
+                                            </button>
+                                        </div> --}}
+                                    </div>
+                                    @endforeach
+                                </div>
+
+                                <h6 class="mt-5 mb-3">Leaves</h6>
+
+                                <!-- Header -->
+                                <div class="row fw-bold small text-secondary mb-2">
+                                    <div class="col-md-5 ps-1">Leave Type</div>
+                                    <div class="col-md-2 text-center">Leave Credits</div>
+                                    <div class="col-md-2 text-center">Used Leaves</div>
+                                    <div class="col-md-2 text-center">Leave Balance</div>
+                                    <div class="col-md-1 text-center">Action</div>
+                                </div>
+
+                                <div id="leaves-list">
+                                    @foreach($leaves as $i => $lv)
+                                    <div class="leave-row row align-items-center py-2 border-bottom" data-leave-id="{{ $lv->id }}">
+
+                                        <!-- Leave Type -->
+                                        <div class="col-md-5">
+                                            <div class="form-check">
+                                                <input class="form-check-input leave-checkbox" type="checkbox"
+                                                        name="leaves[{{ $i }}][leave_id]" value="{{ $lv->id }}" id="leave_{{ $lv->id }}"
+                                                        {{ old("leaves.$i.assigned_days") ? 'checked' : '' }}>
+                                                <label class="form-check-label" for="leave_{{ $lv->id }}">{{ $lv->name }}</label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Credits -->
+                                        {{-- <div class="col-md-2 text-center text-muted">
+                                            <span class="leave-credits">0</span>
+                                            <input type="hidden" name="leaves[{{ $i }}][assigned_days]"
+                                                class="leave-days leave-credits-input"
+                                                value="{{ old("leaves.$i.assigned_days", 0) }}">
+                                        </div> --}}
+
+                                        <div class="col-md-2 text-center text-muted">
+                                            <span class="leave-credits">0</span>
+                                            {{-- No hidden input here at all — JS adds it dynamically only when assigned --}}
+                                        </div>
+
+                                        <!-- Used -->
+                                        <div class="col-md-2 text-center text-muted">
+                                            <span class="leave-used">0</span>
+                                        </div>
+
+                                        <!-- Balance -->
+                                        <div class="col-md-2 text-center fw-medium">
+                                            <span class="leave-balance">0</span>
+                                        </div>
+
+                                        <!-- Action -->
+                                        <div class="col-md-1 text-center">
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-link text-secondary p-0" type="button"
+                                                        data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="fas fa-ellipsis-v fa-sm"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                                    <li>
+                                                        <a class="dropdown-item assign-leave-inline" href="javascript:void(0)"
+                                                           data-leave-id="{{ $lv->id }}"
+                                                           data-leave-name="{{ $lv->name }}">
+                                                            Assign Leave
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="javascript:void(0)"
+                                                           onclick="openLeaveHistory('{{ $lv->id }}', '{{ addslashes($lv->name) }}')">
+                                                            Leave History
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Inline assign form (hidden by default) -->
+                                    <div id="assign-form-{{ $lv->id }}"
+                                         class="assign-leave-form row bg-white border border-secondary-subtle p-3 rounded-3 shadow-sm d-none"
+                                         data-leave-id="{{ $lv->id }}">
+
+                                        <div class="col-12 mb-3">
+                                            <h6 class="mb-0 fw-semibold text-dark">
+                                                Assign Leave to: {{ $lv->name }}
+                                            </h6>
+                                        </div>
+
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label small fw-medium text-muted mb-1 d-block">
+                                                Number of days
+                                            </label>
+                                            <input type="number"
+                                                   class="form-control form-control-sm"
+                                                   id="assign-days-{{ $lv->id }}"
+                                                   min="1"
+                                                   value="1"
+                                                   required>
+                                        </div>
+
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label small fw-medium text-muted mb-1 d-block">
+                                                Effective Date (optional)
+                                            </label>
+                                            <input type="date"
+                                                   class="form-control form-control-sm"
+                                                   id="assign-date-{{ $lv->id }}">
+                                        </div>
+
+                                        <div class="col-md-4 mb-3 d-flex align-items-end gap-2">
+                                            <button type="button"
+                                                    class="btn btn-sm btn-primary px-4 save-assign-leave"
+                                                    data-leave-id="{{ $lv->id }}">
+                                                Save
+                                            </button>
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-secondary px-4 cancel-assign-leave"
+                                                    data-leave-id="{{ $lv->id }}">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                </div>
+
+                                <!-- ===================== LEAVE HISTORY MODAL ===================== -->
+                                <div class="modal fade" id="leaveHistoryModal" tabindex="-1" role="dialog" aria-labelledby="leaveHistoryModalLabel" aria-hidden="true">
+                                    <div class="modal-dialog modal-lg" role="document">
+                                        <div class="modal-content border-0 shadow">
+
+                                            <div class="modal-header" style="background:#f8f9fa; border-bottom:2px solid #dee2e6;">
+                                                <h5 class="modal-title fw-bold text-dark" id="leaveHistoryModalLabel">
+                                                    <i class="fas fa-history me-2 text-primary"></i>
+                                                    Leave History &mdash; <span id="lh-leave-name" class="text-primary"></span>
+                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+                                                        data-dismiss="modal">&times;</button>
+                                            </div>
+
+                                            <div class="modal-body px-4 py-3">
+
+                                                <!-- Loading spinner -->
+                                                <div id="lh-loading" class="text-center py-4">
+                                                    <div class="spinner-border text-primary" role="status"></div>
+                                                    <p class="text-muted mt-2">Loading leave history...</p>
+                                                </div>
+
+                                                <!-- Content (shown after load) -->
+                                                <div id="lh-content" style="display:none;">
+
+                                                    <!-- ── Leave Credit ── -->
+                                                    <h6 class="fw-bold text-uppercase text-dark mb-2" style="letter-spacing:.5px;">
+                                                        Leave Credit
+                                                    </h6>
+                                                    <div class="table-responsive mb-1">
+                                                        <table class="table table-sm table-bordered mb-0" id="lh-credit-table">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th>Date Assigned</th>
+                                                                    <th class="text-center">Assigned Leaves</th>
+                                                                    <th>Reference #</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody id="lh-credit-body">
+                                                                <!-- JS fills this -->
+                                                            </tbody>
+                                                            <tfoot>
+                                                                <tr class="fw-bold">
+                                                                    <td>Total</td>
+                                                                    <td class="text-center" id="lh-credit-total">0</td>
+                                                                    <td></td>
+                                                                </tr>
+                                                            </tfoot>
+                                                        </table>
+                                                    </div>
+
+                                                    <!-- ── Leave Usage ── -->
+                                                    <h6 class="fw-bold text-uppercase text-dark mb-2 mt-4" style="letter-spacing:.5px;">
+                                                        Leave Usage
+                                                    </h6>
+                                                    <div class="table-responsive mb-1">
+                                                        <table class="table table-sm table-bordered mb-0" id="lh-usage-table">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th>Date of Leave</th>
+                                                                    <th class="text-center">No of Days</th>
+                                                                    <th>Reference #</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody id="lh-usage-body">
+                                                                <!-- JS fills this -->
+                                                            </tbody>
+                                                            <tfoot>
+                                                                <tr class="fw-bold">
+                                                                    <td>Total</td>
+                                                                    <td class="text-center" id="lh-usage-total">0</td>
+                                                                    <td></td>
+                                                                </tr>
+                                                            </tfoot>
+                                                        </table>
+                                                    </div>
+
+                                                    <!-- ── Leave Balance ── -->
+                                                    <div class="mt-3 ps-1">
+                                                        <span class="fw-bold text-danger fs-6">Leave Balance &nbsp;&nbsp;
+                                                            <span id="lh-balance" class="fw-bold">0</span>
+                                                        </span>
+                                                    </div>
+
+                                                </div><!-- /#lh-content -->
+
+                                                <!-- Empty state -->
+                                                <div id="lh-empty" style="display:none;" class="text-center text-muted py-4">
+                                                    <i class="fas fa-folder-open fa-2x mb-2"></i>
+                                                    <p>No leave history found for this employee.</p>
+                                                </div>
+
+                                            </div><!-- /.modal-body -->
+
+                                            <div class="modal-footer" style="background:#f8f9fa;">
+                                                <button type="button" class="btn btn-secondary btn-sm"
+                                                        data-bs-dismiss="modal" data-dismiss="modal">Close</button>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- =================== END LEAVE HISTORY MODAL =================== -->
+
+
                             </div>
                         </div>
-                        @endforeach
                     </div>
+
+                    <!-- Educational Background -->
+                    <div class="tab-pane fade" id="educ" role="tabpanel" aria-labelledby="educ-tab">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6>Educational Background</h6>
+
+                                <!-- Table-like header row -->
+                                <div class="row fw-bold mb-2">
+                                    <div class="col-md-5">Name of School*</div>
+                                    <div class="col-md-2">Level*</div>
+                                    <div class="col-md-2">From</div>
+                                    <div class="col-md-2">To</div>
+                                    <div class="col-md-1"></div>
+                                </div>
+
+                                <div id="educ-bg-list">
+                                    <div class="educ-row row mb-2">
+                                        <div class="col-md-5"><input type="text" name="educational_backgrounds[0][name_of_school]" class="form-control" placeholder="Name of school"></div>
+                                        <div class="col-md-2">
+                                            <select name="educational_backgrounds[0][level]" class="form-control">
+                                                <option value="">Select Level</option>
+                                                <option value="Elementary">Elementary</option>
+                                                <option value="High School">High School</option>
+                                                <option value="Vocational">Vocational</option>
+                                                <option value="College">College</option>
+                                                <option value="Graduate">Graduate</option>
+                                                <option value="Post Graduate">Post Graduate</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2"><input type="date" name="educational_backgrounds[0][tenure_start]" class="form-control" placeholder="From"></div>
+                                        <div class="col-md-2"><input type="date" name="educational_backgrounds[0][tenure_end]" class="form-control" placeholder="To"></div>
+                                        <div class="col-md-1"><button type="button" class="btn btn-sm btn-outline-danger remove-educ">-</button></div>
+                                    </div>
+                                </div>
+                                <button type="button" id="add-educ" class="btn btn-sm btn-outline-primary mb-4">Add education</button>
+
+                                <!-- Attachments - ONLY IN EDUCATIONAL BACKGROUND TAB -->
+                                <div class="card mt-4 border-orange">
+                                    <div class="card-body">
+                                        <h6 class="mb-4 text-orange">Attachments</h6>
+                                        <div id="attachments-list">
+                                            @php
+                                                $commonAttachments = [
+                                                    'Birth Certificate',
+                                                    'Valid ID',
+                                                    'Marriage Contract',
+                                                    'Health Card',
+                                                    'NBI',
+                                                    'Resume',
+                                                    'Location Sketch',
+                                                    '2x2',
+                                                    'Police Clearance',
+                                                    'police clearance',
+                                                    'NBI',
+                                                    'GSIS',
+                                                    'HMO',
+                                                ];
+                                            @endphp
+
+                                            @foreach($commonAttachments as $index => $name)
+                                            <div class="attachment-row row align-items-center mb-3">
+                                                <div class="col-md-4">
+                                                    <div class="form-check">
+                                                        <input
+                                                            class="form-check-input attachment-checkbox"
+                                                            type="checkbox"
+                                                            id="attach_{{ $index }}"
+                                                            value="{{ $name }}"
+                                                        >
+                                                        <label class="form-check-label" for="attach_{{ $index }}">
+                                                            {{ $name }}
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="input-group">
+                                                        <div class="custom-file">
+                                                            <input
+                                                                type="file"
+                                                                class="custom-file-input attachment-file"
+                                                                name="attachments[{{ $index }}]"
+                                                                id="file_{{ $index }}"
+                                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                                disabled
+                                                            >
+                                                            <label class="custom-file-label text-truncate" for="file_{{ $index }}">
+                                                                Choose file...
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <!-- Hidden input to store the name -->
+                                                    <input type="hidden" name="attachment_names[{{ $index }}]" class="attachment-name" value="{{ $name }}" disabled>
+                                                </div>
+                                                <div class="col-md-2 text-right">
+                                                    <button type="button" class="btn btn-sm btn-danger remove-attachment" disabled>
+                                                        Remove
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- End of Attachments -->
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
-            <!-- End of Attachments -->
-        </div>
-    </div>
-</div>
-
             <div class="card-footer d-flex justify-content-between">
                 <div>
                     <a href="{{ route('users.index') }}" class="btn btn-secondary">Cancel</a>

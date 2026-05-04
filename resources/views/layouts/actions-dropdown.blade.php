@@ -332,6 +332,11 @@
         @if($currentRoute === 'inventory_purchase_orders.index')
         <li><hr class="dropdown-divider"></li>
         <li role="presentation">
+            <a href="{{ route('inventory_purchase_orders.show', $id) }}" class="dropdown-item">
+                <i class="nav-icon i-Eye font-weight-bold mr-2"></i> View Details
+            </a>
+        </li>
+        <li role="presentation">
             <a href="javascript:void(0);" class="dropdown-item" onclick="viewPOInvoice({{ $po->id }})">
                 <i class="nav-icon i-Receipt-3 font-weight-bold mr-2"></i> View PO Invoice
             </a>
@@ -356,6 +361,11 @@
             </li>
             @endif
             @if($status === 'approved')
+            <li role="presentation">
+                <a href="javascript:void(0);" class="dropdown-item text-success" onclick="confirmAddToInventory({{ $id }})">
+                    <i class="nav-icon i-Add font-weight-bold mr-2"></i> Add Stocks to Inventory
+                </a>
+            </li>
             <li role="presentation">
                 <a href="javascript:void(0);" class="dropdown-item" onclick="openLogStocksModal({{ $id }})">
                     <i class="nav-icon i-Folder-Download font-weight-bold mr-2"></i> Log Stocks in Inventory
