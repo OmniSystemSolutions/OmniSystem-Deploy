@@ -981,6 +981,8 @@ new Vue({
     chefs: [],
     availableOrders: [],
     stations: [],
+    branchProducts: [],
+    branchComponents: [],
     headerLabelMap: {
         pending: 'Running Time',
         served: 'Time Served',
@@ -1145,10 +1147,12 @@ groupedOrders() {
       station_id: this.selectedStation
     }
   }).then(res => {
-    this.orderItems = res.data.orderItems;
-    this.availableOrders = res.data.availableOrders;
-    this.chefs = res.data.chefs;
-    this.stations = res.data.stations;
+    this.orderItems       = res.data.orderItems;
+    this.availableOrders  = res.data.availableOrders;
+    this.chefs            = res.data.chefs;
+    this.stations         = res.data.stations;
+    this.branchProducts   = res.data.branchProducts;
+    this.branchComponents = res.data.branchComponents;
     console.log('details:', this.orderItems);
     // Restore expanded recipe if it still exists
     if (currentExpandedId && this.orderItems.some(i => i.order_detail_id === currentExpandedId)) {

@@ -883,6 +883,44 @@ function disapprovePO(id) {
     const modal = new bootstrap.Modal(document.getElementById('disapproveModal'));
     modal.show();
 }
+
+function confirmAddToInventory(poId) {
+    Swal.fire({
+        title: 'Add Stocks to Inventory?',
+        text: 'All remaining quantities will be added to the branch inventory and this PO will be marked as completed.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, Add Stocks',
+        cancelButtonText: 'Cancel',
+    }).then(result => {
+        if (!result.isConfirmed) return;
+
+        const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+        fetch(`/inventory/purchase-orders/${poId}/add-to-inventory`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': token,
+            },
+        })
+        .then(r => r.json())
+        .then(resp => {
+            if (resp && resp.success) {
+                Swal.fire({
+                    title: 'Done!',
+                    text: resp.message,
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                }).then(() => window.location.reload());
+            } else {
+                Swal.fire('Error', resp.message || 'Failed to add stocks.', 'error');
+            }
+        })
+        .catch(() => Swal.fire('Error', 'An unexpected error occurred.', 'error'));
+    });
+}
 </script>
 
 @endsection

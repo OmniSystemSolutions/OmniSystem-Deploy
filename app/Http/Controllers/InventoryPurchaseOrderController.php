@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Branch;
+use App\Models\BranchComponent;
+use App\Models\BranchProduct;
 use App\Models\Component;
 use App\Models\InventoryPurchaseOrder;
 use App\Models\PoDetail;
@@ -178,7 +180,10 @@ class InventoryPurchaseOrderController extends Controller
         $purchaseOrder = InventoryPurchaseOrder::with([
             'supplier',
             'user',
-            'details.component'
+            'approvedBy',
+            'archivedBy',
+            'details.component.category',
+            'details.component.unit',
         ])->findOrFail($id);
 
         return view('inventory_purchase_orders.show', compact('purchaseOrder'));
@@ -530,12 +535,17 @@ class InventoryPurchaseOrderController extends Controller
                 $detail->received_qty = ($detail->received_qty ?? 0) + $toAdd;
                 $detail->save();
 
-                // increase component onhand
-                $component = Component::find($detail->component_id);
-                if ($component) {
-                    $component->onhand = ($component->onhand ?? 0) + $toAdd;
-                    $component->save();
+                // increase branch-specific component onhand, always update cost, only set price if null
+                $branchStock = BranchComponent::firstOrCreate(
+                    ['branch_id' => $po->branch_id, 'component_id' => $detail->component_id],
+                    ['onhand' => 0]
+                );
+                $branchStock->onhand = (float)($branchStock->onhand ?? 0) + $toAdd;
+                $branchStock->cost = $detail->unit_cost;
+                if (is_null($branchStock->price) || $branchStock->price === '' || $branchStock->price === '0') {
+                    $branchStock->price = $detail->unit_cost;
                 }
+                $branchStock->save();
             }
 
             // reload details and determine if ALL lines on the PO are fully received
@@ -557,6 +567,50 @@ class InventoryPurchaseOrderController extends Controller
             DB::rollBack();
             \Log::error('Failed to log stocks: ' . $e->getMessage());
             return response()->json(['success' => false, 'message' => 'Failed to log stocks.'], 500);
+        }
+    }
+
+    public function addToInventory($id)
+    {
+        $po = InventoryPurchaseOrder::with('details')->findOrFail($id);
+
+        if ($po->status !== 'approved') {
+            return response()->json(['success' => false, 'message' => 'PO must be approved before adding to inventory.'], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            foreach ($po->details as $detail) {
+                $remaining = max(0, (int)$detail->qty - (int)($detail->received_qty ?? 0));
+                if ($remaining <= 0) continue;
+
+                if ($detail->component_id) {
+                    // Update branch-specific component stock, always update cost, only set price if null
+                    $branchStock = BranchComponent::firstOrCreate(
+                        ['branch_id' => $po->branch_id, 'component_id' => $detail->component_id],
+                        ['onhand' => 0]
+                    );
+                    $branchStock->onhand = (float)($branchStock->onhand ?? 0) + $remaining;
+                    $branchStock->cost = $detail->unit_cost;
+                    if (is_null($branchStock->price) || $branchStock->price === '' || $branchStock->price === '0') {
+                        $branchStock->price = $detail->unit_cost;
+                    }
+                    $branchStock->save();
+                }
+
+                $detail->received_qty = (int)($detail->received_qty ?? 0) + $remaining;
+                $detail->save();
+            }
+
+            $po->status = 'completed';
+            $po->save();
+
+            DB::commit();
+            return response()->json(['success' => true, 'message' => 'Stocks added to inventory successfully.']);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('addToInventory failed: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to add stocks to inventory.'], 500);
         }
     }
 
